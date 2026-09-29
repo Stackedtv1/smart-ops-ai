@@ -15,7 +15,6 @@ const ROLES = [
 
 export default function Login() {
   const { go } = useNav();
-  const [role, setRole] = useState(ROLES[0]);
   const [note, setNote] = useState(null);
 
   return (
@@ -29,26 +28,18 @@ export default function Login() {
         </div>
 
         <div className="stack" style={{ gap: 10 }}>
-          <div className="eyebrow" style={{ color: 'var(--bar-muted)' }}>Choose a role</div>
+          <div className="eyebrow" style={{ color: 'var(--bar-muted)' }}>Choose a role · tap to open</div>
           <div className="roles">
             {ROLES.map((r) => (
-              <button key={r.id} className={`role ${role.id === r.id ? 'sel' : ''}`} onClick={() => setRole(r)} aria-pressed={role.id === r.id}>
-                <span className="t">{r.t}</span>
+              <button key={r.id} className="role" onClick={() => go(r.to)}>
+                <span className="row between" style={{ gap: 8 }}>
+                  <span className="t">{r.t}</span>
+                  <span className="role-go" aria-hidden="true">Open →</span>
+                </span>
                 <span className="d">{r.d}</span>
+                <span className="role-who">Demo login: {r.who.name} · {r.who.id}{r.who.lines.length ? ` · ${r.who.lines.join(' · ')}` : ''}</span>
               </button>
             ))}
-          </div>
-        </div>
-
-        <div className="idcard">
-          <div className="avatar">{role.who.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</div>
-          <div className="row wrap between" style={{ gap: 14 }}>
-            <div className="stack-sm" style={{ gap: 2 }}>
-              <div style={{ fontWeight: 800, fontSize: 18 }}>{role.who.name}</div>
-              <div className="mono small muted">Employee {role.who.id}</div>
-              <div className="small">{role.who.lines.join(' · ')}</div>
-            </div>
-            <button className="btn btn-primary btn-lg" onClick={() => go(role.to)}>Demo Login</button>
           </div>
         </div>
 

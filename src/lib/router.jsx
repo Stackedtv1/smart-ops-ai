@@ -59,7 +59,8 @@ export function NavProvider({ initial = '/', syncHash = false, scrollTarget = nu
     [syncHash]
   );
 
-  const value = useMemo(() => ({ path, go, back }), [path, go, back]);
+  // embedded = a nested navigator (e.g. the phone inside Presenter Mode)
+  const value = useMemo(() => ({ path, go, back, embedded: !syncHash }), [path, go, back, syncHash]);
   return <NavCtx.Provider value={value}>{children}</NavCtx.Provider>;
 }
 

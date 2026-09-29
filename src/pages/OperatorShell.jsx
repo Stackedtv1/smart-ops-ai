@@ -3,7 +3,7 @@ import { OPERATOR } from '../lib/config.js';
 import { Icon } from '../components/ui.jsx';
 
 export default function OperatorShell({ title, back, children }) {
-  const { go, back: goBack } = useNav();
+  const { go, back: goBack, embedded } = useNav();
   return (
     <div className="op">
       <header className="op-top">
@@ -18,6 +18,7 @@ export default function OperatorShell({ title, back, children }) {
             )}
             <span className="sub">Bus {OPERATOR.bus} • Route {OPERATOR.route}</span>
           </div>
+          {!back && !embedded && <button className="op-back" style={{ fontSize: 14, textDecoration: 'underline' }} onClick={() => go('/')}>Switch role</button>}
         </div>
         <span className="demo-flag" style={{ marginTop: 8 }}>Demo Environment</span>
       </header>
