@@ -183,7 +183,7 @@ p { margin: 0; }
 .op-top .brand { white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.03em; }
 .op-top .sub { white-space: nowrap; font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--bar-muted); letter-spacing: .02em; }
 .op-back { background: none; border: 0; color: var(--bar-ink); padding: 6px 8px 6px 0; font-weight: 700; font-size: 15px; }
-.op-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.op-body { padding: 16px 16px 88px; /* bottom room so the hosting badge never covers Submit */ display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .op-stopped { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--ink-2); font-size: 13px; font-weight: 600; }
 
 .bigbtn {
@@ -453,8 +453,8 @@ p { margin: 0; }
 .role .d { color: var(--bar-muted); font-size: 13px; }
 .idcard { display: grid; grid-template-columns: auto 1fr; gap: 16px; padding: 18px; border-radius: var(--r); background: var(--surface); color: var(--ink); align-items: center; }
 .idcard .avatar { width: 64px; height: 64px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 28px; }
-.login-foot { color: var(--bar-muted); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-.login-foot button { background: none; border: 0; color: var(--bar-muted); text-decoration: underline; font-size: 12px; padding: 4px; }
+.login-foot { padding-bottom: 72px; /* clears the hosting badge in the corner */ color: var(--bar-muted); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.login-foot button { background: none; border: 0; color: var(--bar-muted); text-decoration: underline; font-size: 14px; padding: 10px 6px; }
 
 .presenter { display: grid; grid-template-columns: 420px minmax(0, 1fr); height: 100vh; height: 100dvh; background: var(--sunken); }
 .presenter .phone-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 10px; background: var(--bar); }

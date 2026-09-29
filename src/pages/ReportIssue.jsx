@@ -85,11 +85,18 @@ export default function ReportIssue({ type = 'vehicle' }) {
         rec.onerror = (e) => {
           setListening(false);
           setInterim('');
-          setMicMsg(e.error === 'not-allowed' || e.error === 'service-not-allowed'
-            ? 'Microphone access is blocked here. Type the report below or play a demo script.'
-            : e.error === 'no-speech' ? 'No speech heard. Tap the mic and try again, or type below.' : `Voice capture stopped (${e.error}). You can type the report instead.`);
+          // iPhone Safari refuses live speech recognition when Siri/Dictation is off
+          // ("service-not-allowed") and sometimes reports "not-allowed". Fall back to
+          // recording the audio and transcribing it on the server.
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+            recRef.current = null;
+            startRecorder();
+            return;
+          }
+          setMicMsg(e.error === 'no-speech' ? 'No speech heard. Tap the mic and try again, or type below.' : `Voice capture stopped (${e.error}). You can type the report instead.`);
         };
         rec.onend = () => {
+          if (recRef.current !== rec) return; // handed off to the recorder fallback
           setListening(false);
           setInterim('');
         };
@@ -102,34 +109,46 @@ export default function ReportIssue({ type = 'vehicle' }) {
         /* fall through to recorder */
       }
     }
-    if (navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined' && CONFIG.aiMode !== 'offline') {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const chunks = [];
-        const mr = new MediaRecorder(stream);
-        mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-        mr.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          setListening(false);
-          setBusy(true);
-          try {
-            const out = await transcribeAudio(new Blob(chunks, { type: mr.mimeType }));
-            setText((t) => `${t ? t + ' ' : ''}${out}`.trim());
-          } catch {
-            setMicMsg('Transcription service unavailable. Type the report below.');
-          }
-          setBusy(false);
-        };
-        mediaRef.current = mr;
-        mr.start();
-        setMode('voice');
-        setListening(true);
-        return;
-      } catch {
-        /* fall through */
-      }
+    startRecorder();
+  }
+
+  async function startRecorder() {
+    if (!(navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined') || CONFIG.aiMode === 'offline') {
+      setMicMsg('Voice input is not available in this browser. Type the report below or play a demo script.');
+      return;
     }
-    setMicMsg('Voice input is not available in this browser. Type the report below or play a demo script.');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      setListening(false);
+      setMicMsg(err?.name === 'NotAllowedError'
+        ? 'Microphone is blocked for this site. On iPhone: tap aA in the address bar → Website Settings → Microphone → Allow, then try again. Or type the report below.'
+        : 'No microphone available. Type the report below or play a demo script.');
+      return;
+    }
+    const chunks = [];
+    const mr = new MediaRecorder(stream);
+    mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      setListening(false);
+      setMicMsg(null);
+      setBusy(true);
+      try {
+        const out = await transcribeAudio(new Blob(chunks, { type: mr.mimeType || 'audio/mp4' }));
+        if (out.trim()) setText((t) => `${t ? t + ' ' : ''}${out}`.trim());
+        else setMicMsg('No speech heard. Tap the mic and try again, or type below.');
+      } catch {
+        setMicMsg('Transcription service unavailable. Type the report below.');
+      }
+      setBusy(false);
+    };
+    mediaRef.current = mr;
+    mr.start();
+    setMode('voice');
+    setListening(true);
+    setMicMsg('Recording… tap the mic again when you\'re done.');
   }
 
   function stopMic() {

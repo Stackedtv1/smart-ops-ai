@@ -65,8 +65,8 @@ export default function Login() {
           <span className="row" style={{ gap: 6 }}>
             <button onClick={() => { const r = loadDemoScenario(); setNote(r.already ? 'Scenario already loaded' : `Loaded ${r.created.length} demo tickets`); }}>Load demo scenario</button>
             <button onClick={() => { resetDemo(); setNote('Demo reset'); }}>Reset</button>
-            {note && <span style={{ color: 'var(--flag)' }}>{note}</span>}
           </span>
+          {note && <span role="status" style={{ color: 'var(--flag)', fontWeight: 700, fontSize: 14, flexBasis: '100%' }}>{note}</span>}
         </div>
       </div>
     </div>
