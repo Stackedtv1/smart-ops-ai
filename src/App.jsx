@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { NavProvider, useNav, match } from './lib/router.jsx';
+import { startCopilot } from './services/copilot.js';
+import Copilot from './pages/Copilot.jsx';
 import Login from './pages/Login.jsx';
 import OperatorHome from './pages/OperatorHome.jsx';
 import ReportIssue from './pages/ReportIssue.jsx';
@@ -28,6 +31,7 @@ export function Screen({ compact }) {
   if (path === '/facilities') return <Facilities />;
   if (path === '/safety') return <Safety />;
   if (path === '/analytics') return <Analytics />;
+  if (path === '/copilot') return <Copilot />;
   if (path === '/roi') return <ROI />;
   if (path === '/roi/calculator') return <ROICalculator />;
   return <Login />;
@@ -69,6 +73,7 @@ function Root() {
 }
 
 export default function App() {
+  useEffect(() => startCopilot(), []);
   return (
     <NavProvider syncHash>
       <Root />

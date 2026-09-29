@@ -16,6 +16,23 @@ const FILTERS = [
   ['resolved', 'Resolved today'],
 ];
 
+function CopilotStrip() {
+  const { go } = useNav();
+  const c = useStore((s) => s.copilot);
+  const fixes = c.audit.filter((a) => a.kind === 'auto-fix' && !a.undone).length;
+  const esc = c.followups.filter((f) => !f.closed).length;
+  const latest = c.incidents[0];
+  return (
+    <button className="cp-strip" onClick={() => go('/copilot')}>
+      <span className="row" style={{ gap: 8, flex: 'none' }}><span className="live-dot" /><b>AI Ops Copilot</b></span>
+      <span className="num"><b>{fixes}</b> auto-fixes</span>
+      <span className="num"><b>{esc}</b> escalation{esc === 1 ? '' : 's'} awaiting a person</span>
+      {latest && <span className="grow cp-latest">Latest: {latest.title}</span>}
+      <span className="cp-open">Open Copilot →</span>
+    </button>
+  );
+}
+
 export default function Dashboard({ compact }) {
   const { go } = useNav();
   const tickets = useStore((s) => s.tickets);
@@ -60,6 +77,8 @@ export default function Dashboard({ compact }) {
         <div className="kpi"><span className="n">{stats.repeatLocations}</span><span className="l">Repeat Problem Locations</span></div>
         <div className="kpi"><span className="n">{stats.assignedPct}%</span><span className="l">Assigned</span></div>
       </div>
+
+      <CopilotStrip />
 
       <div className="main-grid">
         <section className="panel">

@@ -113,7 +113,7 @@ export default function IssueMap({ tickets, onOpen, height = 480, focus, showRes
   const visible = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return tickets.filter((t) => t.location?.lat && (t.status !== 'Resolved' ? true : showResolved && t.resolution?.at >= today.getTime()));
+    return tickets.filter((t) => t.location?.lat && t.status !== 'Merged' && (t.status !== 'Resolved' ? true : showResolved && t.resolution?.at >= today.getTime()));
   }, [tickets, showResolved]);
 
   // Spread markers that share a stop.

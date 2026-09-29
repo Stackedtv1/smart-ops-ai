@@ -103,7 +103,12 @@ function freshState(now = Date.now()) {
     tickets: seed.reports.map((s) => buildSeedTicket(s, now)),
     scenarioLoaded: false,
     liveCount: 0,
+    copilot: emptyCopilot(),
   };
+}
+
+export function emptyCopilot() {
+  return { audit: [], incidents: [], handled: {}, followups: [], sweeps: 0, checks: 0, lastSweep: null, startedAt: Date.now() };
 }
 
 function load() {
@@ -112,7 +117,7 @@ function load() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (s.day !== dayKey()) return null; // new day -> fresh demo
-    return s;
+    return s.copilot ? s : { ...s, copilot: emptyCopilot() };
   } catch {
     return null;
   }
@@ -183,6 +188,17 @@ export function useStore(selector = (s) => s) {
 }
 
 export const getTicket = (id) => state.tickets.find((t) => t.id === id);
+
+// ---- used by the Operations Copilot ----
+export const emitEvent = (ev) => emit(ev);
+export function setCopilot(fn) {
+  commit({ ...state, copilot: fn(state.copilot || emptyCopilot()) });
+}
+export function restoreTickets(prev) {
+  const byId = new Map(prev.map((t) => [t.id, t]));
+  commit({ ...state, tickets: state.tickets.map((t) => byId.get(t.id) || t) });
+  prev.forEach((t) => pushRemote(t));
+}
 
 // ---------------------------------------------------------------------------
 // Supabase wiring (no-op unless configured)
@@ -258,6 +274,10 @@ export function createTicket({ text, reportType, inputMode, photo, vehicle, rout
     })();
   }
   return t;
+}
+
+export function updateTicket(id, fn, events = []) {
+  return mutate(id, fn, events);
 }
 
 function mutate(id, fn, events = []) {
@@ -375,7 +395,7 @@ export const getDraft = (id) => drafts.get(id);
 // ---------------------------------------------------------------------------
 // Derived data
 // ---------------------------------------------------------------------------
-export const isOpen = (t) => t.status !== 'Resolved';
+export const isOpen = (t) => t.status !== 'Resolved' && t.status !== 'Merged';
 
 export function dashboardStats(tickets, now = Date.now()) {
   const today = startOfDay(now);
@@ -422,7 +442,7 @@ export function patternAlerts(tickets, now = Date.now()) {
       id: `veh-${k}`, kind: 'vehicle', key: bus, bus, component: comp,
       title: `Bus ${bus}`, headline: `${comp} issue reported`,
       dates: list.map((t) => fmtDate(t.createdAt)),
-      detail: `${list.length} similar reports within ${span} days`,
+      detail: `${list.length} similar reports within ${span} day${span === 1 ? '' : 's'}`,
       recommendation: 'Flag for maintenance review',
       ticketIds: list.map((t) => t.id), latest: list[list.length - 1].createdAt,
     });

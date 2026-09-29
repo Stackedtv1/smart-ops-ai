@@ -10,6 +10,7 @@ const TABS = [
   { to: '/maintenance', label: 'Maintenance' },
   { to: '/facilities', label: 'Facilities' },
   { to: '/safety', label: 'Safety' },
+  { to: '/copilot', label: 'Copilot' },
   { to: '/analytics', label: 'Analytics' },
   { to: '/roi', label: 'ROI' },
 ];
@@ -29,6 +30,14 @@ export function Toasts() {
   useEffect(
     () =>
       onEvent((ev) => {
+        if (ev.type === 'copilot') {
+          const inc = ev.incident;
+          if (inc.kind === 'data' || inc.kind === 'flag') return;
+          const item = { id: `cp-${Math.random().toString(36).slice(2)}`, copilot: inc };
+          setItems((xs) => [...xs.slice(-2), item]);
+          setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 8000);
+          return;
+        }
         if (ev.type !== 'created') return;
         const t = ev.ticket;
         setItems((xs) => [...xs.slice(-2), t]);
@@ -39,7 +48,13 @@ export function Toasts() {
   if (!items.length) return null;
   return (
     <div className="toasts" aria-live="polite">
-      {items.map((t) => (
+      {items.map((t) => t.copilot ? (
+        <div key={t.id} className={`toast ${t.copilot.severity === 'high' ? 'high' : 'medium'} toast-cp`} onClick={() => go('/copilot')}>
+          <div className="eyebrow" style={{ color: 'var(--accent)' }}>Copilot · {t.copilot.kind === 'auto-fix' ? 'auto-corrected' : 'escalated'}</div>
+          <div style={{ fontWeight: 800, marginTop: 2 }}>{t.copilot.title}</div>
+          {t.copilot.stages?.correct && <div className="small muted">{t.copilot.stages.correct}</div>}
+        </div>
+      ) : (
         <div key={t.id} className={`toast ${t.priority}`} onClick={() => go(`/ticket/${t.id}`)}>
           <div className="row between">
             <span className="eyebrow" style={{ color: t.priority === 'high' ? 'var(--high)' : 'var(--med)' }}>New {t.priority} ticket</span>

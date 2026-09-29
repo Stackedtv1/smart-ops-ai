@@ -26,7 +26,7 @@ export default function TicketDetail({ id }) {
   }
 
   const stop = stopById(t.stopId);
-  const resolved = t.status === 'Resolved';
+  const resolved = t.status === 'Resolved' || t.status === 'Merged';
   const isStop = t.ai.category === 'facilities';
 
   return (
@@ -68,6 +68,25 @@ export default function TicketDetail({ id }) {
         </dl>
       </div>
 
+      {t.status === 'Merged' && (
+        <div className="notice notice-info">
+          <b>Merged duplicate.</b> The AI Operations Copilot merged this report into{' '}
+          <a href={`#/ticket/${t.mergedInto}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${t.mergedInto}`); }}>{t.mergedInto}</a>, where the work is tracked. The report stays on file as evidence.
+        </div>
+      )}
+      {t.linkedReports?.length > 0 && (
+        <section className="panel">
+          <div className="panel-h"><h2>Linked reports</h2><span className="small muted">Duplicates merged by Copilot</span></div>
+          <div className="panel-b stack-sm">
+            {t.linkedReports.map((r) => (
+              <div key={r.id} className="ev row between wrap" style={{ gap: 8 }}>
+                <span className="small">“{r.text}” <span className="muted">— {r.by}, {fmtTime(r.at)}</span></span>
+                <a className="mono xs" href={`#/ticket/${r.id}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${r.id}`); }}>{r.id}</a>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {alerts.map((a) => (
         <div key={a.id} className={`alert ${a.kind}`}>
           <div className="k">{a.kind === 'vehicle' ? 'AI Pattern Alert' : 'Repeat Location Alert'}</div>
@@ -92,7 +111,7 @@ export default function TicketDetail({ id }) {
                 <dt>Operational concern</dt><dd>{t.ai.safety_review_required ? 'Requires review' : 'Routine'}</dd>
                 <dt>Destination</dt><dd>{deptLabel(t.department)}</dd>
                 <dt>Summary</dt><dd style={{ fontWeight: 500 }}>{t.ai.summary}</dd>
-                <dt>Recommended action</dt><dd>{t.ai.recommended_action || recommendedAction(t.ai)}</dd>
+                <dt>Recommended action</dt><dd>{recommendedAction({ ...t.ai, priority: t.priority })}</dd>
               </dl>
               {t.ai.safety_review_required && (
                 <div className="notice notice-warn"><b>{t.ai.category === 'safety' ? 'Supervisor' : isStop ? 'Facilities' : 'Supervisor / Maintenance'} Review Required.</b> {t.ai.category === 'safety' ? 'AI does not replace emergency procedures; existing SMART safety procedures apply.' : 'The AI does not decide whether a bus is safe to operate.'}</div>

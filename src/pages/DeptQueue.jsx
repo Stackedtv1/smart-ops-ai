@@ -97,7 +97,7 @@ export default function DeptQueue({ dept }) {
                 </dl>
                 <blockquote className="quote" style={{ fontSize: 15 }}>“{sel.originalText}”</blockquote>
                 <div className="small"><b>AI summary:</b> {sel.ai.summary}</div>
-                <div className="rec"><b style={{ flex: 'none' }}>Next step</b><span>{sel.ai.recommended_action || recommendedAction(sel.ai)}</span></div>
+                <div className="rec"><b style={{ flex: 'none' }}>Next step</b><span>{recommendedAction({ ...sel.ai, priority: sel.priority })}</span></div>
                 {sel.photo && <div className="ev-photo"><img src={sel.photo} alt="Operator photo" /></div>}
 
                 <div className="stack-sm">

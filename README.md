@@ -48,9 +48,26 @@ Without Supabase, tabs in the same browser still sync (BroadcastChannel), and **
 6. **Maintenance** tab → select the door job → Accept Job → Resolve (note required) → dashboard updates. Report → Route → Repair → Resolution.
 7. **Pre-Trip Inspection** → mark Doors as Defect → ticket created automatically.
 8. **Analytics** → category mix, garage/shift, repeat problems, digital-reporting adoption (team-level only).
-9. **ROI** → estimated annual value, payback and ROI. *Open full calculator* to enter SMART's own numbers (Conservative / Expected presets).
+9. **Copilot** → *Live scenario: Bus 4721 brake warning*. Watch it detect the 3rd brake report in 48 h, merge the duplicate, raise priority, alert the Macomb maintenance supervisor, then escalate to the Operations Manager if nobody acknowledges within 2 minutes (demo timer). Ask it “What are our biggest unresolved issues right now?”. Show the audit trail and Undo.
+10. **ROI** → estimated annual value, payback and ROI. *Open full calculator* to enter SMART's own numbers (Conservative / Expected presets).
 
-**Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline.
+**Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline (17 open issues, including the Copilot demo tickets).
+
+## AI Operations Copilot
+
+`src/services/copilot.js` runs every 15 s while the app is open (in production: a scheduled server job). Each finding goes Detect → Diagnose → Correct workflow / Escalate → Follow up, and every change is logged with the reason, who was notified, and an undo snapshot.
+
+| Rule | Copilot action |
+|---|---|
+| Same vehicle + defect reported again within 48 h | Merge duplicates into one ticket; 3+ reports → raise to HIGH, alert maintenance supervisor, follow up |
+| Ticket in the wrong department | Reroute (unless a person chose that routing) |
+| Vehicle defect with no bus number | Fill from operator sign-on record, or ask the operator |
+| Unassigned > 15 min | Assign least-loaded crew |
+| Safety report unacknowledged > 10 min, or HIGH job not started > 45 min | Escalate; escalate again if no one acknowledges |
+| Repeat defect pattern | Flag for maintenance review |
+| GTFS feed missing/expiring, stop IDs not in feed, tablet offline > 60 min | Notify data team / garage IT |
+
+Guardrails (enforced in code): the Copilot never resolves a vehicle or safety ticket, never lowers their priority, and never states a bus is repaired or safe. `netlify/functions/ask-copilot.js` answers staff questions from a live data snapshot when `OPENAI_API_KEY` is set; otherwise answers come from the built-in query engine.
 
 ## AI contract
 

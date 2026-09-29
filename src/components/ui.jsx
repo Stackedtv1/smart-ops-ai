@@ -33,12 +33,13 @@ export function DemoFlag({ text = 'Demo / Concept System' }) {
   return <span className="demo-flag">{text}</span>;
 }
 
-export function PriorityPill({ p, resolved }) {
+export function PriorityPill({ p, resolved, merged }) {
+  if (merged) return <span className="pill p-merged">Merged</span>;
   if (resolved) return <span className="pill p-resolved">Resolved</span>;
   return <span className={`pill p-${p}`}>{p}</span>;
 }
 
-const S = { New: 's-new', Assigned: 's-assigned', 'In Progress': 's-progress', Resolved: 's-resolved' };
+const S = { New: 's-new', Assigned: 's-assigned', 'In Progress': 's-progress', Resolved: 's-resolved', Merged: 's-merged' };
 export function StatusPill({ s }) {
   return <span className={`status ${S[s] || ''}`}>{s}</span>;
 }

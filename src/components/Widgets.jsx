@@ -75,6 +75,7 @@ export function CrewPanel({ tickets, now = Date.now(), limit = 7 }) {
   for (const t of tickets) {
     if (!t.assignee) continue;
     const c = crews.get(t.assignee) || { name: t.assignee, dept: t.department, active: [], done: [] };
+    if (t.status === 'Merged') continue;
     if (t.status !== 'Resolved') c.active.push(t);
     else if (t.resolution?.at >= today.getTime()) c.done.push(t);
     crews.set(t.assignee, c);
