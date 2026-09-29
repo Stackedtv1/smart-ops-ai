@@ -104,6 +104,7 @@ function freshState(now = Date.now()) {
     scenarioLoaded: false,
     liveCount: 0,
     guardian: emptyGuardian(),
+    fleet: emptyFleet(),
   };
 }
 
@@ -117,7 +118,7 @@ function load() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (s.day !== dayKey()) return null; // new day -> fresh demo
-    return s.guardian ? s : { ...s, guardian: emptyGuardian() };
+    return { ...s, guardian: s.guardian || emptyGuardian(), fleet: s.fleet || emptyFleet() };
   } catch {
     return null;
   }
@@ -191,6 +192,12 @@ export const getTicket = (id) => state.tickets.find((t) => t.id === id);
 
 // ---- used by SMART Ops AI Guardian ----
 export const emitEvent = (ev) => emit(ev);
+export function emptyFleet() {
+  return { extraMiles: {}, extraDays: 0, workOrders: [], woStatus: {}, simulatedDays: 0 };
+}
+export function setFleet(fn) {
+  commit({ ...state, fleet: fn(state.fleet || emptyFleet()) });
+}
 export function setGuardian(fn) {
   commit({ ...state, guardian: fn(state.guardian || emptyGuardian()) });
 }
@@ -250,7 +257,7 @@ export function createTicket({ text, reportType, inputMode, photo, vehicle, rout
     operatorId, operatorName, vehicle, route,
     garage: garageOf(vehicle), shift: shiftOf(now),
     stopId: loc.stopId, location: { lat: loc.lat, lng: loc.lng, label: loc.label, source: loc.source },
-    reportType, originalText: text, inputMode, hasVoice: inputMode !== 'typed',
+    reportType, originalText: text, inputMode, hasVoice: inputMode !== 'typed' && inputMode !== 'system',
     photo: photo || null,
     ai: aiOut, aiJson: toContractJson(aiOut),
     priority: aiOut.priority, department: dep, status: 'New', assignee: null,

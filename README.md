@@ -53,6 +53,25 @@ Without Supabase, tabs in the same browser still sync (BroadcastChannel), and **
 
 **Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline (17 open issues, including the Guardian demo tickets).
 
+## Fleet Health & Maintenance
+
+Data path: **Fleet/bus number → VIN → SMART maintenance record → Guardian.** Staff see the bus number; the VIN is the permanent key underneath.
+
+The **Fleet Health** tab shows each bus's mileage, engine hours, next PM, oil interval, brake and tire inspections, active fault codes, open SMART Ops tickets, maintenance work orders, last repair, repeat defects, and a Guardian status: Normal / Maintenance Due / Attention Required / Critical Review, with the reasons listed.
+
+In the demo the maintenance-system records are simulated (`src/data/demoFleet.json`: fictional VINs, mileage, work orders, DTCs). In production SMART Ops reads them from SMART's existing fleet/maintenance system instead of asking anyone to enter data twice.
+
+Guardian adds three vehicle rules:
+- **PM due soon** (≤ 500 mi, nothing scheduled) → maintenance alert to planning.
+- **PM overdue with no open PM work order** → creates a HIGH ticket and a work request, escalates to the maintenance supervisor, follows up.
+- **Critical fault code** → critical review escalation. Repeat-defect escalations also check the maintenance system for an open work order (e.g. WO-18442 on bus 4721) and say so.
+
+Guardian detects, alerts, prioritizes and escalates; maintenance personnel make the return-to-service decision.
+
+Demo: *Guardian → Live scenario: Bus 4721 brake warning*, then *Fleet Health → Simulate 3 service days of mileage* (Bus 4721 goes from "PM due in 500 miles" to "PM interval exceeded by 220 miles").
+
+**Questions for SMART:** which system holds maintenance work orders and PM schedules (and does it have an API or export)? Is telematics/DTC data available? What are the actual PM and inspection intervals?
+
 ## Guardian and Copilot
 
 **Guardian watches. Copilot answers.**

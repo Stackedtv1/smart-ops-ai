@@ -15,6 +15,7 @@ const KIND = {
   data: { label: 'Data / system', cls: 'k-data' },
   'follow-up': { label: 'Follow-up', cls: 'k-fix' },
   undo: { label: 'Undone', cls: 'k-data' },
+  maint: { label: 'Maintenance alert', cls: 'k-flag' },
 };
 
 
@@ -44,13 +45,14 @@ function IncidentCard({ i }) {
       <ol className="cp-stages">
         <Stage n="1" label="Detect" text={i.stages.detect} on />
         <Stage n="2" label="Diagnose" text={i.stages.diagnose} on />
-        <Stage n="3" label={i.kind === 'escalation' || i.kind === 'data' || i.kind === 'flag' ? 'Route / escalate' : 'Correct workflow'} text={i.stages.correct} on />
+        <Stage n="3" label={i.kind === 'escalation' || i.kind === 'data' || i.kind === 'flag' || i.kind === 'maint' ? 'Route / escalate' : 'Correct workflow'} text={i.stages.correct} on />
         <Stage n="4" label="Follow up" text={i.stages.followUp} on={i.stages.followUp !== 'No follow-up needed.'} />
       </ol>
       <div className="row between wrap" style={{ gap: 8, marginTop: 8 }}>
         <span className={`cp-state ${done ? 'ok' : ''}`}>{i.state}</span>
         <span className="row wrap" style={{ gap: 6 }}>
           {i.humanRequired && <span className="tag">Human confirmation required</span>}
+          {i.vehicle && <button className="btn btn-sm" onClick={() => go(`/fleet/${i.vehicle}`)}>Bus {i.vehicle} fleet record</button>}
           {i.ticketIds?.[0] && <button className="btn btn-sm" onClick={() => go(`/ticket/${i.ticketIds[0]}`)}>Open {i.ticketIds[0]}</button>}
         </span>
       </div>

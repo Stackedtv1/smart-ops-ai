@@ -8,7 +8,7 @@ import { DemoFlag } from '../components/ui.jsx';
 const ROLES = [
   { id: 'operator', t: 'Operator', d: 'Report vehicle, stop and safety issues by voice.', to: '/operator', who: { name: OPERATOR.name, id: OPERATOR.id, lines: [OPERATOR.garage, `Bus ${OPERATOR.bus}`, `Route ${routeLabel(OPERATOR.route)}`] } },
   { id: 'dispatch', t: 'Supervisor / Dispatch', d: 'Command dashboard, live map, ticket queue.', to: '/dashboard', who: { name: 'Angela Brooks', id: 'DEMO-S-204', lines: ['Dispatch Supervisor', 'All garages'] } },
-  { id: 'maintenance', t: 'Maintenance', d: 'Vehicle defect queue and repair close-out.', to: '/maintenance', who: { name: 'Daniel Alvarez', id: 'DEMO-M-311', lines: ['Technician', 'Oakland Terminal'] } },
+  { id: 'maintenance', t: 'Maintenance', d: 'Vehicle defect queue, fleet health, repair close-out.', to: '/maintenance', who: { name: 'Daniel Alvarez', id: 'DEMO-M-311', lines: ['Technician', 'Oakland Terminal'] } },
   { id: 'facilities', t: 'Facilities', d: 'Shelters, trash, signs, lighting, graffiti.', to: '/facilities', who: { name: 'Shelter Crew 1', id: 'DEMO-F-102', lines: ['Facilities', 'Oakland / Wayne'] } },
   { id: 'admin', t: 'Administration', d: 'Analytics, adoption, ROI calculator.', to: '/analytics', who: { name: 'Executive View', id: 'DEMO-A-001', lines: ['Administration', 'Read-only analytics'] } },
 ];

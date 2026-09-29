@@ -10,6 +10,7 @@ const TABS = [
   { to: '/maintenance', label: 'Maintenance' },
   { to: '/facilities', label: 'Facilities' },
   { to: '/safety', label: 'Safety' },
+  { to: '/fleet', label: 'Fleet Health' },
   { to: '/guardian', label: 'Guardian' },
   { to: '/copilot', label: 'Copilot' },
   { to: '/analytics', label: 'Analytics' },

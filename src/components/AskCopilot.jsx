@@ -8,6 +8,7 @@ const SUGGESTED = [
   'Which buses have repeat defects?',
   'What issues need attention right now?',
   "What's stalled or overdue?",
+  'Which buses are due for maintenance?',
   'What did Guardian change today?',
   'Any offline devices or data problems?',
 ];
@@ -61,7 +62,7 @@ export default function AskCopilot({ tall = false }) {
               <ul className="cp-items">
                 {m.items.map((it, j) => (
                   <li key={j}>
-                    {it.ticketId ? <a href={`#/ticket/${it.ticketId}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${it.ticketId}`); }}>{it.label}</a> : it.label}
+                    {it.bus ? <a href={`#/fleet/${it.bus}`} onClick={(e) => { e.preventDefault(); go(`/fleet/${it.bus}`); }}>{it.label}</a> : it.ticketId ? <a href={`#/ticket/${it.ticketId}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${it.ticketId}`); }}>{it.label}</a> : it.label}
                   </li>
                 ))}
               </ul>

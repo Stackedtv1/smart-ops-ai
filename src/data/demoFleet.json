@@ -1,0 +1,76 @@
+{
+  "_note": "SIMULATED maintenance-system records for the demo. VINs, mileage, work orders and fault codes are fictional. In production these are read from SMART's existing fleet/maintenance system; the VIN is the permanent key and the fleet number is what staff see.",
+  "pmIntervalMi": 6000,
+  "oilIntervalMi": 12000,
+  "brakeInspectionDays": 45,
+  "tireInspectionDays": 30,
+  "vehicles": [
+    { "bus": "4721", "vin": "XDMB40LFXKD047210", "year": 2019, "model": "40 ft low-floor diesel", "mileage": 412380, "engineHours": 28114, "avgDailyMi": 240,
+      "lastPmMi": 406880, "lastPmDaysAgo": 26, "lastOilMi": 406880, "brakeInspDaysAgo": 38, "tireInspDaysAgo": 12,
+      "faults": [{ "code": "C0265", "system": "Brakes", "desc": "ABS/brake control valve circuit — intermittent", "severity": "medium", "daysAgo": 5, "active": true }],
+      "workOrders": [{ "id": "WO-18442", "system": "brakes", "desc": "Brake warning lamp intermittent — diagnose air brake control circuit", "status": "Open", "openedDaysAgo": 5, "tech": "Tech R. Chen" }],
+      "lastRepair": { "wo": "WO-18107", "desc": "Replaced rear brake chamber (left)", "daysAgo": 34 } },
+
+    { "bus": "4602", "vin": "XDMB40LFXKD046020", "year": 2019, "model": "40 ft low-floor diesel", "mileage": 398920, "engineHours": 27202, "avgDailyMi": 230,
+      "lastPmMi": 394160, "lastPmDaysAgo": 21, "lastOilMi": 388160, "brakeInspDaysAgo": 20, "tireInspDaysAgo": 9,
+      "faults": [],
+      "workOrders": [],
+      "lastRepair": { "wo": "WO-18390", "desc": "Rear door sensitive edge cleaned, closing speed adjusted", "daysAgo": 16 } },
+
+    { "bus": "4128", "vin": "XDMB40LFXJD041280", "year": 2018, "model": "40 ft low-floor diesel", "mileage": 451206, "engineHours": 31540, "avgDailyMi": 225,
+      "lastPmMi": 448012, "lastPmDaysAgo": 14, "lastOilMi": 448012, "brakeInspDaysAgo": 11, "tireInspDaysAgo": 6,
+      "faults": [], "workOrders": [],
+      "lastRepair": { "wo": "WO-18211", "desc": "Front suspension bushing replaced", "daysAgo": 29 } },
+
+    { "bus": "4210", "vin": "XDMB40LFXKD042100", "year": 2019, "model": "40 ft low-floor diesel", "mileage": 402774, "engineHours": 27911, "avgDailyMi": 235,
+      "lastPmMi": 399100, "lastPmDaysAgo": 16, "lastOilMi": 393100, "brakeInspDaysAgo": 30, "tireInspDaysAgo": 27,
+      "faults": [], "workOrders": [],
+      "lastRepair": { "wo": "WO-18302", "desc": "Left mirror mount replaced", "daysAgo": 21 } },
+
+    { "bus": "3852", "vin": "XDMB40LFXGD038520", "year": 2016, "model": "40 ft low-floor diesel", "mileage": 531460, "engineHours": 38022, "avgDailyMi": 210,
+      "lastPmMi": 526610, "lastPmDaysAgo": 23, "lastOilMi": 520610, "brakeInspDaysAgo": 44, "tireInspDaysAgo": 19,
+      "faults": [{ "code": "C0110", "system": "Brakes", "desc": "Low air pressure event logged during service stop", "severity": "medium", "daysAgo": 0, "active": true }],
+      "workOrders": [],
+      "lastRepair": { "wo": "WO-18260", "desc": "Brake slack adjusters inspected", "daysAgo": 25 } },
+
+    { "bus": "3987", "vin": "XDMB40LFXGD039870", "year": 2016, "model": "40 ft low-floor diesel", "mileage": 518330, "engineHours": 37130, "avgDailyMi": 215,
+      "lastPmMi": 514020, "lastPmDaysAgo": 20, "lastOilMi": 514020, "brakeInspDaysAgo": 22, "tireInspDaysAgo": 32,
+      "faults": [],
+      "workOrders": [{ "id": "WO-18460", "system": "accessibility_equipment", "desc": "Wheelchair ramp limit switch — recurring fault", "status": "Open", "openedDaysAgo": 3, "tech": "Tech K. Oduya" }],
+      "lastRepair": { "wo": "WO-18431", "desc": "Ramp limit switch adjusted", "daysAgo": 3 } },
+
+    { "bus": "3990", "vin": "XDMB40LFXGD039900", "year": 2016, "model": "40 ft low-floor diesel", "mileage": 522905, "engineHours": 37480, "avgDailyMi": 210,
+      "lastPmMi": 518300, "lastPmDaysAgo": 22, "lastOilMi": 518300, "brakeInspDaysAgo": 15, "tireInspDaysAgo": 14,
+      "faults": [], "workOrders": [],
+      "lastRepair": { "wo": "WO-18288", "desc": "Farebox display ribbon cable reseated", "daysAgo": 23 } },
+
+    { "bus": "4490", "vin": "XDMB40LFXLD044900", "year": 2020, "model": "40 ft low-floor diesel", "mileage": 301455, "engineHours": 20988, "avgDailyMi": 240,
+      "lastPmMi": 297400, "lastPmDaysAgo": 17, "lastOilMi": 291400, "brakeInspDaysAgo": 17, "tireInspDaysAgo": 17,
+      "faults": [{ "code": "P0217", "system": "Engine", "desc": "Engine coolant over-temperature condition", "severity": "critical", "daysAgo": 0, "active": true }],
+      "workOrders": [],
+      "lastRepair": { "wo": "WO-18199", "desc": "Coolant hose clamp replaced", "daysAgo": 30 } },
+
+    { "bus": "4731", "vin": "XDMB35LFXLD047310", "year": 2020, "model": "35 ft low-floor diesel", "mileage": 288140, "engineHours": 20110, "avgDailyMi": 200,
+      "lastPmMi": 283900, "lastPmDaysAgo": 21, "lastOilMi": 277900, "brakeInspDaysAgo": 12, "tireInspDaysAgo": 12,
+      "faults": [{ "code": "C1095", "system": "Brakes", "desc": "ABS pump motor circuit", "severity": "medium", "daysAgo": 0, "active": true }],
+      "workOrders": [],
+      "lastRepair": { "wo": "WO-18350", "desc": "Kneeling air valve adjusted", "daysAgo": 0 } },
+
+    { "bus": "4415", "vin": "XDMB40LFXKD044150", "year": 2019, "model": "40 ft low-floor diesel", "mileage": 405880, "engineHours": 28340, "avgDailyMi": 230,
+      "lastPmMi": 402000, "lastPmDaysAgo": 17, "lastOilMi": 396000, "brakeInspDaysAgo": 9, "tireInspDaysAgo": 28,
+      "faults": [{ "code": "P0711", "system": "Transmission", "desc": "Transmission fluid temperature sensor — intermittent", "severity": "medium", "daysAgo": 2, "active": true }],
+      "workOrders": [],
+      "lastRepair": { "wo": "WO-18244", "desc": "Rear HVAC belt replaced", "daysAgo": 27 } },
+
+    { "bus": "4588", "vin": "XDMB40LFXKD045880", "year": 2019, "model": "40 ft low-floor diesel", "mileage": 399615, "engineHours": 27760, "avgDailyMi": 230,
+      "lastPmMi": 395700, "lastPmDaysAgo": 17, "lastOilMi": 389700, "brakeInspDaysAgo": 33, "tireInspDaysAgo": 21,
+      "faults": [], "workOrders": [],
+      "lastRepair": { "wo": "WO-18333", "desc": "Stop request chime fuse replaced", "daysAgo": 0 } },
+
+    { "bus": "4077", "vin": "XDMB40LFXJD040770", "year": 2018, "model": "40 ft low-floor diesel", "mileage": 460080, "engineHours": 32205, "avgDailyMi": 220,
+      "lastPmMi": 454000, "lastPmDaysAgo": 28, "lastOilMi": 448000, "brakeInspDaysAgo": 40, "tireInspDaysAgo": 25,
+      "faults": [],
+      "workOrders": [{ "id": "WO-18517", "system": "preventive_maintenance", "desc": "6,000-mile PM — scheduled tonight, Wayne Terminal", "status": "Scheduled", "openedDaysAgo": 1, "tech": "Night shift" }],
+      "lastRepair": { "wo": "WO-18322", "desc": "Driver-side wiper blade replaced", "daysAgo": 0 } }
+  ]
+}

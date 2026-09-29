@@ -21,6 +21,9 @@ import { getState, updateTicket, setGuardian, emitEvent, restoreTickets, createT
 import { DEPARTMENTS, deptLabel } from '../lib/config.js';
 import { GTFS_META, MAP_STOPS, stopById } from './maps.js';
 import { recommendedAction } from './ai.js';
+import { vehicleRecord, openPmOrder, openOrderFor, sysLabel, FLEET_BUSES, FLEET_RULES } from './fleet.js';
+import { setFleet } from './store.js';
+import { STOPS } from './maps.js';
 import { MIN, fmtTime, fmtDate } from '../lib/time.js';
 
 export const GUARDIAN = 'SMART Ops AI Guardian';
@@ -91,11 +94,11 @@ function leastLoadedCrew(dept, tickets) {
 // ---------------------------------------------------------------------------
 // Recording
 // ---------------------------------------------------------------------------
-function record({ key, rule, kind, ticketIds = [], title, detect, diagnose, correct, notified = [], changes = [], undo = null, followUp = null, humanRequired = false, severity = 'medium', now }) {
+function record({ key, rule, kind, vehicle = null, ticketIds = [], title, detect, diagnose, correct, notified = [], changes = [], undo = null, followUp = null, humanRequired = false, severity = 'medium', now }) {
   const incident = {
-    id: uid(), key, rule, kind, ticketIds, title, severity, at: now,
+    id: uid(), key, rule, kind, vehicle, ticketIds, title, severity, at: now,
     stages: { detect, diagnose, correct, followUp: followUp ? followUp.text : 'No follow-up needed.' },
-    state: kind === 'escalation' ? 'Awaiting acknowledgement' : kind === 'auto-fix' ? 'Auto-corrected' : kind === 'data' ? 'Needs attention' : kind === 'flag' ? 'Flagged for review' : 'Logged',
+    state: kind === 'escalation' ? 'Awaiting acknowledgement' : kind === 'auto-fix' ? 'Auto-corrected' : kind === 'data' ? 'Needs attention' : kind === 'flag' ? 'Flagged for review' : kind === 'maint' ? 'Maintenance alert' : 'Logged',
     humanRequired,
   };
   const entry = { id: uid(), at: now, incidentId: incident.id, rule, kind, ticketIds, title, why: diagnose, changes, notified, undo, undone: false, humanRequired };
@@ -143,6 +146,9 @@ function ruleDuplicates(now) {
     const prev = [primary, ...dups].map((t) => structuredClone(t));
     const chain = chainFor({ ...primary, department: 'maintenance' });
     const comp = primary.ai.component.toLowerCase();
+    const rec = vehicleRecord(primary.vehicle, getState(), now);
+    const wo = rec && openOrderFor(rec, primary.ai.subcategory);
+    const woText = wo ? ` Existing work order ${wo.id} ("${wo.desc}") has been open since ${fmtDate(wo.openedAt)}. Supervisor review recommended.` : ' No open work order found in the maintenance system for this defect.';
 
     for (const d of dups) {
       guard('merge', d, { status: 'Merged' });
@@ -156,6 +162,7 @@ function ruleDuplicates(now) {
         ...x,
         priority: raise ? 'high' : x.priority,
         department: 'maintenance',
+        workOrder: wo ? wo.id : x.workOrder,
         linkedReports: [...(x.linkedReports || []), ...dups.map((d) => ({ id: d.id, at: d.createdAt, text: d.originalText, by: d.operatorName }))],
         notes: [...x.notes, { at: now, by: GUARDIAN, text: `${dups.length} duplicate report${dups.length > 1 ? 's' : ''} merged. ${all.length} ${comp} reports on bus ${primary.vehicle} in ${THRESHOLDS.duplicateWindowHrs} hours${priorFix ? `; earlier report ${priorFix.id} was closed as "${(priorFix.resolution?.note || '').replace(/\.$/, '')}"` : ''}. Supervisor/maintenance review required before next trip.` }],
       }),
@@ -169,7 +176,7 @@ function ruleDuplicates(now) {
       ticketIds: [primary.id, ...dups.map((d) => d.id)],
       title: `Bus ${primary.vehicle}: ${comp} reported ${all.length} times in ${THRESHOLDS.duplicateWindowHrs} hours`,
       detect: `Bus ${primary.vehicle} has submitted the same ${comp} report ${all.length} times in ${THRESHOLDS.duplicateWindowHrs} hours (${all.map((t) => fmtTime(t.createdAt)).join(', ')}).`,
-      diagnose: `${repeat ? 'Repeat high-priority maintenance issue' : 'Duplicate report of an open issue'}${priorFix ? `. The earlier fix ("${(priorFix.resolution?.note || '').replace(/\.$/, '')}") did not hold` : ''}. ${dups.length} open duplicate${dups.length > 1 ? 's' : ''} would split the work.`,
+      diagnose: `${repeat ? 'Repeat high-priority maintenance issue' : 'Duplicate report of an open issue'}${priorFix ? `. The earlier fix ("${(priorFix.resolution?.note || '').replace(/\.$/, '')}") did not hold` : ''}. ${dups.length} open duplicate${dups.length > 1 ? 's' : ''} would split the work.${woText}`,
       correct: `Merged ${dups.length} duplicate${dups.length > 1 ? 's' : ''} into ${primary.id}${raise ? ', raised priority to HIGH' : ''}, kept routing to Maintenance, alerted ${chain[0]}.`,
       changes: [...dups.map((d) => `${d.id}: status → Merged`), ...(raise ? [`${primary.id}: priority ${primary.priority.toUpperCase()} → HIGH`] : []), `${primary.id}: linked ${dups.length} report(s)`],
       notified: [chain[0], primary.assignee].filter(Boolean),
@@ -400,9 +407,108 @@ function ruleFollowUps(now) {
 }
 
 // ---------------------------------------------------------------------------
+// Fleet Health: preventive maintenance and fault codes from the maintenance
+// system (simulated in the demo). Guardian alerts and escalates; maintenance
+// staff decide return to service.
+// ---------------------------------------------------------------------------
+const vehicleRoute = (bus) => vehicleData.vehicles.find((v) => v.fleet_number === bus)?.route || '461';
+
+function rulePreventiveMaintenance(now) {
+  const state = getState();
+  for (const bus of FLEET_BUSES) {
+    const rec = vehicleRecord(bus, state, now);
+    if (!rec) continue;
+    const pmOrder = openPmOrder(rec);
+    if (rec.pmRemainingMi >= 0 && rec.pmRemainingMi <= FLEET_RULES.pmDueSoonMi && !pmOrder) {
+      const key = `pm-due:${bus}:${rec.lastPmMi}`;
+      if (handled(key)) continue;
+      record({
+        key, rule: 'pm-due', kind: 'maint', now, vehicle: bus,
+        title: `Bus ${bus} — maintenance alert: preventive maintenance due in ${rec.pmRemainingMi.toLocaleString()} miles`,
+        detect: `Bus ${bus} (VIN ${rec.vin}) is at ${rec.mileage.toLocaleString()} mi. Next ${FLEET_RULES.pmIntervalMi.toLocaleString()}-mile PM is due at ${rec.nextPmAt.toLocaleString()} mi.`,
+        diagnose: `About ${Math.max(1, Math.round(rec.pmRemainingMi / rec.avgDailyMi))} service day(s) of mileage left before the PM interval. No PM work order is scheduled yet.`,
+        correct: 'Notified maintenance planning to schedule the PM.',
+        notified: [`Maintenance planning (${vehicleData.garages.find((g) => g.id === vehicleData.vehicles.find((v) => v.fleet_number === bus)?.garage)?.name || 'garage'})`],
+      });
+    }
+    if (rec.pmRemainingMi < 0 && !pmOrder) {
+      const key = `pm-over:${bus}:${rec.lastPmMi}`;
+      if (handled(key)) continue;
+      const over = Math.abs(rec.pmRemainingMi);
+      const stop = STOPS.find((s) => s.routes.includes(vehicleRoute(bus)));
+      const wrId = `WR-${String(90000 + Math.floor(Math.random() * 9000))}`;
+      const t = createTicket({
+        text: `Generated by Guardian: bus ${bus} passed its ${FLEET_RULES.pmIntervalMi.toLocaleString()}-mile PM interval by ${over.toLocaleString()} miles and no PM work order exists.`,
+        reportType: 'system', inputMode: 'system', photo: null,
+        vehicle: bus, route: vehicleRoute(bus), operatorId: 'SYSTEM', operatorName: GUARDIAN,
+        position: { stopId: stop?.id, lat: stop?.lat, lng: stop?.lng, source: 'Garage record' },
+        location: { stopId: stop?.id, lat: stop?.lat, lng: stop?.lng, label: stop?.name || 'Garage', source: 'Garage record' },
+        ai: {
+          category: 'vehicle_defect', subcategory: 'preventive_maintenance', component: 'Preventive maintenance', title: 'PM overdue',
+          issue: `PM interval exceeded by ${over.toLocaleString()} mi`, condition: `PM interval exceeded by ${over.toLocaleString()} mi`,
+          priority: 'high', department: 'maintenance', summary: `Preventive maintenance overdue by ${over.toLocaleString()} miles; no open PM work order.`,
+          recommended_action: 'Maintenance supervisor to schedule PM and decide whether the bus stays in service until then.',
+          safety_review_required: true, confidence: 1, engine: 'Guardian (maintenance records)',
+        },
+      });
+      setFleet((f) => ({ ...f, workOrders: [...f.workOrders, { id: wrId, bus, system: 'preventive_maintenance', desc: `PM work request created by Guardian (${t.id})`, status: 'Requested', openedAt: now, tech: 'Unassigned' }] }));
+      updateTicket(t.id, (x) => ({ ...x, workOrder: wrId }), [{ label: `Work request ${wrId} sent to maintenance system`, by: GUARDIAN }]);
+      const chain = chainFor({ ...t, department: 'maintenance' });
+      record({
+        key, rule: 'pm-overdue', kind: 'escalation', severity: 'high', now, ticketIds: [t.id], vehicle: bus,
+        title: `Bus ${bus} — Guardian escalation: PM interval exceeded by ${over.toLocaleString()} miles`,
+        detect: `Bus ${bus} is at ${rec.mileage.toLocaleString()} mi; PM was due at ${rec.nextPmAt.toLocaleString()} mi.`,
+        diagnose: 'Open maintenance ticket not found. Nothing in the maintenance system shows this PM is scheduled.',
+        correct: `Created ${t.id} and work request ${wrId}, notified ${chain[0]}. Whether the bus stays in service is the supervisor's decision.`,
+        changes: [`${t.id} created (HIGH, Maintenance)`, `${wrId} requested`],
+        notified: [chain[0]],
+        followUp: { ticketId: t.id, chain, text: `If maintenance doesn't acknowledge in ${THRESHOLDS.followUpMin} min (demo timer), escalate to ${chain[1]}.` },
+        humanRequired: true,
+      });
+    }
+  }
+}
+
+function ruleFaultCodes(now) {
+  const state = getState();
+  for (const bus of FLEET_BUSES) {
+    const rec = vehicleRecord(bus, state, now);
+    for (const f of rec?.faults || []) {
+      if (f.severity !== 'critical') continue;
+      const key = `dtc:${bus}:${f.code}`;
+      if (handled(key)) continue;
+      const chain = chainFor({ department: 'maintenance', garage: vehicleData.garages.find((g) => g.id === vehicleData.vehicles.find((v) => v.fleet_number === bus)?.garage)?.name });
+      record({
+        key, rule: 'fault-code', kind: 'escalation', severity: 'high', now, vehicle: bus,
+        title: `Bus ${bus} — critical fault ${f.code}: ${f.desc}`,
+        detect: `Maintenance system reports active ${f.system.toLowerCase()} fault ${f.code} ("${f.desc}") on bus ${bus}.`,
+        diagnose: `Critical ${f.system.toLowerCase()} condition. ${rec.openWorkOrders.length ? `Open work orders: ${rec.openWorkOrders.map((w) => w.id).join(', ')}.` : 'No open work order covers it.'}`,
+        correct: `Alerted ${chain[0]} and dispatch for critical review. Guardian does not decide whether the bus stays in service.`,
+        notified: [chain[0], 'Dispatch'],
+        humanRequired: true,
+      });
+    }
+  }
+}
+
+// Demo control: add mileage as if the fleet ran N service days.
+export function simulateServiceDays(days = 3) {
+  const state = getState();
+  setFleet((f) => {
+    const extraMiles = { ...f.extraMiles };
+    for (const bus of FLEET_BUSES) {
+      const rec = vehicleRecord(bus, state);
+      extraMiles[bus] = (extraMiles[bus] || 0) + rec.avgDailyMi * days;
+    }
+    return { ...f, extraMiles, simulatedDays: (f.simulatedDays || 0) + days };
+  });
+  setTimeout(sweep, 600);
+}
+
+// ---------------------------------------------------------------------------
 export function sweep() {
   const now = Date.now();
-  const rules = [ruleDataHealth, ruleMisrouted, ruleMissingInfo, ruleDuplicates, ruleRepeatDefects, ruleStalled, ruleFollowUps];
+  const rules = [ruleDataHealth, ruleMisrouted, ruleMissingInfo, ruleDuplicates, ruleRepeatDefects, rulePreventiveMaintenance, ruleFaultCodes, ruleStalled, ruleFollowUps];
   for (const r of rules) {
     try {
       r(now);

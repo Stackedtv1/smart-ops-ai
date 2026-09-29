@@ -533,3 +533,29 @@ p { margin: 0; }
 .mode-badge.compact { padding: 2px 8px; font-size: 11px; }
 .cp-chat.tall .cp-msgs { max-height: none; min-height: 420px; height: calc(100vh - 380px); }
 @media (max-width: 1000px) { .cp-chat.tall .cp-msgs { height: auto; min-height: 280px; max-height: 60vh; } }
+
+/* Fleet Health */
+.fs-pill { display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.fs-crit { background: var(--high); color: #fff; }
+.fs-attn { background: var(--high-soft); color: var(--high); }
+.fs-due { background: var(--med-soft); color: var(--med); }
+.fs-ok { background: var(--ok-soft); color: var(--ok); }
+.stripe.fs-crit, .fs-dot.fs-crit { background: var(--high); }
+.stripe.fs-attn, .fs-dot.fs-attn { background: #e57373; }
+.stripe.fs-due, .fs-dot.fs-due { background: var(--med); }
+.stripe.fs-ok { background: var(--ok); }
+.fs-stat { text-align: left; cursor: pointer; font: inherit; color: var(--ink); }
+.fs-stat.on { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pm-bar { height: 5px; background: var(--sunken); border-radius: 3px; overflow: hidden; margin-top: 4px; max-width: 160px; }
+.pm-bar span { display: block; height: 100%; }
+.fs-path { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; font-weight: 700; }
+.fs-path span { padding: 2px 8px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
+.fs-path i { font-style: normal; color: var(--muted); }
+.fs-reasons { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
+.fs-reasons li { display: flex; gap: 8px; align-items: baseline; }
+.fs-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
+.fs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.fs-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fs-card .k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.fs-card .v { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.1; }
+button.ev { font: inherit; color: var(--ink); width: 100%; }

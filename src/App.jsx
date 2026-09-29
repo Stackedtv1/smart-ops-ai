@@ -3,6 +3,7 @@ import { NavProvider, useNav, match } from './lib/router.jsx';
 import { startGuardian } from './services/guardian.js';
 import Copilot from './pages/Copilot.jsx';
 import Guardian from './pages/Guardian.jsx';
+import FleetHealth, { VehicleDetail } from './pages/FleetHealth.jsx';
 import Login from './pages/Login.jsx';
 import OperatorHome from './pages/OperatorHome.jsx';
 import ReportIssue from './pages/ReportIssue.jsx';
@@ -32,6 +33,8 @@ export function Screen({ compact }) {
   if (path === '/facilities') return <Facilities />;
   if (path === '/safety') return <Safety />;
   if (path === '/analytics') return <Analytics />;
+  if (path === '/fleet') return <FleetHealth />;
+  if ((m = match('/fleet/:bus', path))) return <VehicleDetail key={path} bus={m.bus} />;
   if (path === '/guardian') return <Guardian />;
   if (path === '/copilot') return <Copilot />;
   if (path === '/roi') return <ROI />;

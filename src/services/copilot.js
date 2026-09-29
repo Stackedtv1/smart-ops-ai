@@ -5,6 +5,7 @@ import { deptLabel } from '../lib/config.js';
 import { GTFS_META } from './maps.js';
 import { MIN, fmtTime } from '../lib/time.js';
 import { DEVICES, THRESHOLDS } from './guardian.js';
+import { fleetHealth, vehicleHealth } from './fleet.js';
 
 const unit = (t) => (t.ai.category === 'facilities' ? `Stop ${t.stopId}` : t.vehicle ? `Bus ${t.vehicle}` : 'Unknown bus');
 const ageMin = (t, now) => (now - t.createdAt) / MIN;
@@ -20,12 +21,22 @@ export function answerLocal(q) {
   const text = q.toLowerCase();
   const item = (t) => ({ ticketId: t.id, label: `${t.priority.toUpperCase()} · ${unit(t)} · ${t.ai.title} · ${t.status}${t.assignee ? ` (${t.assignee})` : ''} · ${Math.round(ageMin(t, now))} min old` });
 
+  if (/\bpm\b|preventive|maintenance due|due for|fleet health|vin|mileage|overdue (pm|maintenance)|critical review|fault code|dtc/.test(text)) {
+    const fh = fleetHealth(s, now).filter((h) => h.status !== 'Normal');
+    if (!fh.length) return { text: 'Every demo bus is Normal: no PM due, no active faults, no repeat defects.' };
+    return {
+      text: `${fh.length} bus${fh.length === 1 ? ' needs' : 'es need'} maintenance attention (from maintenance records + operator reports):`,
+      items: fh.map((h) => ({ bus: h.rec.bus, label: `Bus ${h.rec.bus} · ${h.status} · ${h.reasons[h.status][0]}` })),
+    };
+  }
   const bus = text.match(/\b(\d{4})\b/)?.[1];
   if (bus && /bus|vehicle|\d{4}/.test(text)) {
     const list = s.tickets.filter((t) => t.vehicle === bus).sort((a, b) => b.createdAt - a.createdAt);
-    if (!list.length) return { text: `No reports for bus ${bus}.` };
+    if (!list.length && !vehicleHealth(bus, s, now)) return { text: `No reports or fleet record for bus ${bus}.` };
     const o = list.filter(isOpen);
-    return { text: `Bus ${bus}: ${list.length} report${list.length > 1 ? 's' : ''} on file, ${o.length} open.`, items: list.slice(0, 6).map(item) };
+    const vh = vehicleHealth(bus, s, now);
+    const fleetLine = vh ? ` Guardian status: ${vh.status}. Next PM ${vh.rec.pmRemainingMi < 0 ? `overdue by ${Math.abs(vh.rec.pmRemainingMi).toLocaleString()} mi` : `in ${vh.rec.pmRemainingMi.toLocaleString()} mi`}${vh.rec.openWorkOrders.length ? `; open work orders ${vh.rec.openWorkOrders.map((w) => w.id).join(', ')}` : ''}.` : '';
+    return { text: `Bus ${bus}: ${list.length} report${list.length === 1 ? '' : 's'} on file, ${o.length} open.${fleetLine}`, items: [...(vh ? [{ bus, label: `Open bus ${bus} fleet record` }] : []), ...list.slice(0, 6).map(item)] };
   }
   const route = text.match(/route\s*(\d{3})/)?.[1];
   if (route) {
