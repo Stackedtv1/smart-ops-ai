@@ -4,7 +4,7 @@ import vehicleData from '../data/demoVehicles.json';
 import { OPERATOR, DEPARTMENTS, deptLabel } from '../lib/config.js';
 import { MIN, startOfDay, dayKey, yymmdd, fmtDate } from '../lib/time.js';
 import { stopById } from './maps.js';
-import { classifyLocal, resolveLocation, toContractJson } from './ai.js';
+import { classifyLocal, resolveLocation, toContractJson, recommendedAction } from './ai.js';
 import * as remote from './supabase.js';
 
 const KEY = 'smart-ops-ai.state.v1';
@@ -64,6 +64,7 @@ function buildSeedTicket(s, now) {
     issue: s.issue, condition: s.issue, priority: s.priority, department: dep, summary: s.summary,
     safety_review_required: s.review, confidence: 0.9 + ((s.seq * 7) % 8) / 100, engine: 'demo',
   };
+  ai.recommended_action = recommendedAction(ai);
   return {
     id: ticketId(createdAt, s.seq),
     seq: s.seq,
@@ -220,7 +221,8 @@ export function createTicket({ text, reportType, inputMode, photo, vehicle, rout
   const seq = state.seq;
   const id = ticketId(now, seq);
   const loc = location || resolveLocation(text, position);
-  const aiOut = ai || classifyLocal({ text, reportType });
+  const base = ai || classifyLocal({ text, reportType });
+  const aiOut = base.recommended_action ? base : { ...base, recommended_action: recommendedAction(base) };
   const dep = aiOut.department;
   const tl = [
     { at: now, label: 'Operator submitted', by: operatorName },

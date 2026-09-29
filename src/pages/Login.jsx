@@ -10,7 +10,7 @@ const ROLES = [
   { id: 'dispatch', t: 'Supervisor / Dispatch', d: 'Command dashboard, live map, ticket queue.', to: '/dashboard', who: { name: 'Angela Brooks', id: 'DEMO-S-204', lines: ['Dispatch Supervisor', 'All garages'] } },
   { id: 'maintenance', t: 'Maintenance', d: 'Vehicle defect queue and repair close-out.', to: '/maintenance', who: { name: 'Daniel Alvarez', id: 'DEMO-M-311', lines: ['Technician', 'Oakland Terminal'] } },
   { id: 'facilities', t: 'Facilities', d: 'Shelters, trash, signs, lighting, graffiti.', to: '/facilities', who: { name: 'Shelter Crew 1', id: 'DEMO-F-102', lines: ['Facilities', 'Oakland / Wayne'] } },
-  { id: 'admin', t: 'Administration', d: 'Analytics, repeat problems, adoption.', to: '/analytics', who: { name: 'Executive View', id: 'DEMO-A-001', lines: ['Administration', 'Read-only analytics'] } },
+  { id: 'admin', t: 'Administration', d: 'Analytics, adoption, ROI calculator.', to: '/analytics', who: { name: 'Executive View', id: 'DEMO-A-001', lines: ['Administration', 'Read-only analytics'] } },
 ];
 
 export default function Login() {

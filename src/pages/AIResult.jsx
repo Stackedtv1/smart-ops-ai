@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { getDraft, createTicket } from '../services/store.js';
-import { classifyReport, resolveLocation } from '../services/ai.js';
+import { classifyReport, resolveLocation, recommendedAction } from '../services/ai.js';
 import { catLabel, deptLabel } from '../lib/config.js';
 import { routeLabel, stopById, stopRoutesLabel } from '../services/maps.js';
 import { sleep } from '../lib/time.js';
@@ -106,6 +106,8 @@ export default function AIResult({ id }) {
           ))}
         </div>
       </div>
+
+      <div className="rec"><b style={{ flex: 'none' }}>Recommended action</b><span>{ai.recommended_action || recommendedAction(ai)}</span></div>
 
       {ai.safety_review_required && ai.category !== 'safety' && (
         <div className="notice notice-warn"><b>{ai.category === 'facilities' ? 'Facilities' : 'Supervisor / Maintenance'} Review Required.</b> SMART Ops AI flags concerns; it does not decide whether a bus is safe to operate.</div>

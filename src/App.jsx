@@ -11,6 +11,7 @@ import Maintenance from './pages/Maintenance.jsx';
 import Facilities from './pages/Facilities.jsx';
 import Safety from './pages/Safety.jsx';
 import Analytics from './pages/Analytics.jsx';
+import ROI, { ROICalculator } from './pages/ROI.jsx';
 import { DemoFlag } from './components/ui.jsx';
 
 export function Screen({ compact }) {
@@ -27,6 +28,8 @@ export function Screen({ compact }) {
   if (path === '/facilities') return <Facilities />;
   if (path === '/safety') return <Safety />;
   if (path === '/analytics') return <Analytics />;
+  if (path === '/roi') return <ROI />;
+  if (path === '/roi/calculator') return <ROICalculator />;
   return <Login />;
 }
 

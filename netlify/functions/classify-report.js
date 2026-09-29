@@ -9,7 +9,7 @@ const SCHEMA = {
   schema: {
     type: 'object',
     additionalProperties: false,
-    required: ['category', 'subcategory', 'component', 'title', 'issue', 'condition', 'priority', 'department', 'summary', 'safety_review_required', 'confidence'],
+    required: ['category', 'subcategory', 'component', 'title', 'issue', 'condition', 'priority', 'department', 'summary', 'recommended_action', 'safety_review_required', 'confidence'],
     properties: {
       category: { type: 'string', enum: ['vehicle_defect', 'facilities', 'safety', 'operations', 'other'] },
       subcategory: { type: 'string', description: 'snake_case, e.g. passenger_door, brakes, broken_glass+trash, passenger_conduct' },
@@ -20,6 +20,7 @@ const SCHEMA = {
       priority: { type: 'string', enum: ['high', 'medium', 'low'] },
       department: { type: 'string', enum: ['maintenance', 'facilities', 'safety', 'operations', 'supervisor'] },
       summary: { type: 'string', description: 'One sentence, factual, no speculation' },
+      recommended_action: { type: 'string', description: 'Next step for agency staff (inspect, dispatch, clean). Never a repair diagnosis and never whether the bus may operate.' },
       safety_review_required: { type: 'boolean' },
       confidence: { type: 'number' },
     },
@@ -35,6 +36,7 @@ Rules:
 - priority high: brakes, steering, tires, doors failing to close, accessibility equipment failing, any safety incident.
   medium: warning lamps, mirrors, wipers, lighting, broken glass. low: cosmetic, HVAC comfort, graffiti, routine trash.
 - Never state or imply whether a bus is safe to operate. Set safety_review_required=true when a supervisor or maintenance person should review.
+- recommended_action is the next step for staff (who should look at what, and how soon). Do not diagnose repairs.
 - confidence is 0..1.`;
 
 export default async (req) => {

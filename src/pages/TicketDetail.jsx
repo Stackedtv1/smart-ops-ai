@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
+import { recommendedAction } from '../services/ai.js';
 import { useStore, assignTicket, setPriority, addNote, resolveTicket, startWork, routeTo, patternAlerts } from '../services/store.js';
 import { DEPARTMENTS, deptLabel, catLabel, PRIORITIES } from '../lib/config.js';
 import { routeLabel, stopById } from '../services/maps.js';
@@ -91,6 +92,7 @@ export default function TicketDetail({ id }) {
                 <dt>Operational concern</dt><dd>{t.ai.safety_review_required ? 'Requires review' : 'Routine'}</dd>
                 <dt>Destination</dt><dd>{deptLabel(t.department)}</dd>
                 <dt>Summary</dt><dd style={{ fontWeight: 500 }}>{t.ai.summary}</dd>
+                <dt>Recommended action</dt><dd>{t.ai.recommended_action || recommendedAction(t.ai)}</dd>
               </dl>
               {t.ai.safety_review_required && (
                 <div className="notice notice-warn"><b>{t.ai.category === 'safety' ? 'Supervisor' : isStop ? 'Facilities' : 'Supervisor / Maintenance'} Review Required.</b> {t.ai.category === 'safety' ? 'AI does not replace emergency procedures; existing SMART safety procedures apply.' : 'The AI does not decide whether a bus is safe to operate.'}</div>

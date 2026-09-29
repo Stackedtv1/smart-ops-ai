@@ -11,6 +11,7 @@ const TABS = [
   { to: '/facilities', label: 'Facilities' },
   { to: '/safety', label: 'Safety' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/roi', label: 'ROI' },
 ];
 
 export function Clock() {

@@ -66,3 +66,43 @@ export function ActivityFeed({ tickets, limit = 8 }) {
     </ul>
   );
 }
+
+export function CrewPanel({ tickets, now = Date.now(), limit = 7 }) {
+  const { go } = useNav();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const crews = new Map();
+  for (const t of tickets) {
+    if (!t.assignee) continue;
+    const c = crews.get(t.assignee) || { name: t.assignee, dept: t.department, active: [], done: [] };
+    if (t.status !== 'Resolved') c.active.push(t);
+    else if (t.resolution?.at >= today.getTime()) c.done.push(t);
+    crews.set(t.assignee, c);
+  }
+  const rows = [...crews.values()]
+    .filter((c) => c.active.length || c.done.length)
+    .sort((a, b) => b.active.length - a.active.length || b.done.length - a.done.length)
+    .slice(0, limit);
+  return (
+    <div>
+      {rows.map((c) => {
+        const avg = c.done.length ? Math.round(c.done.reduce((s, t) => s + (t.resolution.at - t.createdAt), 0) / c.done.length / 60000) : null;
+        const next = c.active[0];
+        return (
+          <div key={c.name} className="crew">
+            <span style={{ minWidth: 0 }}>
+              <b>{c.name}</b>
+              <span className="xs muted" style={{ display: 'block', overflowWrap: 'anywhere' }}>
+                {next ? <a href={`#/ticket/${next.id}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${next.id}`); }}>{next.ai.title} · {next.status}</a> : 'Available'}
+              </span>
+            </span>
+            <span className="load" title={`${c.active.length} active job${c.active.length === 1 ? '' : 's'}`} aria-label={`${c.active.length} active jobs`}>
+              {[0, 1, 2, 3].map((i) => <i key={i} className={i < c.active.length ? 'on' : ''} />)}
+            </span>
+            <span className="xs muted num" style={{ textAlign: 'right', minWidth: 64 }}>{c.done.length} done{avg != null ? <><br />avg {avg} min</> : ''}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

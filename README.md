@@ -48,6 +48,7 @@ Without Supabase, tabs in the same browser still sync (BroadcastChannel), and **
 6. **Maintenance** tab → select the door job → Accept Job → Resolve (note required) → dashboard updates. Report → Route → Repair → Resolution.
 7. **Pre-Trip Inspection** → mark Doors as Defect → ticket created automatically.
 8. **Analytics** → category mix, garage/shift, repeat problems, digital-reporting adoption (team-level only).
+9. **ROI** → estimated annual value, payback and ROI. *Open full calculator* to enter SMART's own numbers (Conservative / Expected presets).
 
 **Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline.
 

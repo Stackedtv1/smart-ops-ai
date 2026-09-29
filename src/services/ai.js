@@ -62,7 +62,45 @@ function firstSentence(text) {
   return s.length > 140 ? `${s.slice(0, 137)}…` : s;
 }
 
-export function classifyLocal({ text, reportType }) {
+// Next step for staff. Recommends review and routing only; never a repair
+// decision and never a call on whether a bus may operate.
+export function recommendedAction(ai) {
+  const s = String(ai.subcategory || '');
+  const high = ai.priority === 'high';
+  if (ai.category === 'safety') {
+    if (s === 'medical') return 'Dispatch supervisor and follow SMART medical-emergency procedure; operator contacts dispatch by radio.';
+    if (s === 'fire_smoke') return 'Follow SMART fire/smoke procedure immediately; notify dispatch and supervisor.';
+    if (s === 'slip_hazard') return 'Supervisor to confirm hazard is cleared at next layover; log for cleaning crew.';
+    if (s === 'stop_security') return 'Supervisor to review stop conditions; request lighting check from Facilities.';
+    return 'Supervisor to respond or contact operator; operator follows existing SMART safety procedures.';
+  }
+  if (ai.category === 'vehicle_defect') {
+    const comp = (ai.component || 'component').toLowerCase();
+    if (s === 'warning_indicator') return 'Maintenance to read fault codes at next layover or pull-in; supervisor decides whether to swap the bus.';
+    if (high) return `Maintenance inspection of ${comp} requested; supervisor/maintenance review before next trip.`;
+    return `Schedule ${comp} inspection at next pull-in.`;
+  }
+  if (ai.category === 'facilities') {
+    const parts = [];
+    if (s.includes('broken_glass')) parts.push('secure broken glass');
+    if (s.includes('trash')) parts.push('empty receptacle');
+    if (s.includes('lighting')) parts.push('restore shelter lighting');
+    if (s.includes('graffiti')) parts.push('remove graffiti');
+    if (s.includes('sign_damage')) parts.push('repair or replace stop sign');
+    if (s.includes('snow_ice')) parts.push('clear snow/ice');
+    const list = parts.length ? parts.join(', ') : 'inspect stop';
+    return `Facilities crew to ${list}${ai.priority !== 'low' ? ' within 24 hours' : ' on next scheduled visit'}.`;
+  }
+  if (ai.category === 'operations') return 'Dispatch to review service impact and post a detour or rider notice if needed.';
+  return 'Route to the responsible team for review.';
+}
+
+export function classifyLocal(input) {
+  const r = classifyCore(input);
+  return { ...r, recommended_action: recommendedAction(r) };
+}
+
+function classifyCore({ text, reportType }) {
   const t = String(text || '').toLowerCase();
   const scores = { vehicle_defect: 0, facilities: 0, safety: 0, operations: 0, other: 0 };
 
@@ -217,6 +255,7 @@ export async function classifyReport(input) {
     return {
       ...local,
       ...r,
+      recommended_action: r.recommended_action || recommendedAction(r),
       title: r.title || local.title,
       component: r.component || local.component,
       issue: r.issue || local.issue,
@@ -252,6 +291,7 @@ export function toContractJson(ai) {
     priority: ai.priority,
     department: ai.department,
     summary: ai.summary,
+    recommended_action: ai.recommended_action || recommendedAction(ai),
     safety_review_required: !!ai.safety_review_required,
     confidence: Number((ai.confidence ?? 0.9).toFixed(2)),
   };

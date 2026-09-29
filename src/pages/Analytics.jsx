@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useStore, patternAlerts } from '../services/store.js';
+import { useStore, patternAlerts, isOpen } from '../services/store.js';
 import { startOfDay } from '../lib/time.js';
 import DashShell from '../components/DashShell.jsx';
 import { PatternAlerts } from '../components/Widgets.jsx';
@@ -20,6 +20,12 @@ const WEEK = {
   adoptionGarage: [['Oakland Terminal', 91], ['Macomb Terminal', 84], ['Wayne Terminal', 76]],
   adoptionShift: [['Morning', 89], ['Afternoon', 82], ['Night', 71]],
 };
+
+const GARAGE_DETAIL = [
+  { name: 'Oakland Terminal', digital: 91, response: '1 min 58 sec', trend: 6 },
+  { name: 'Macomb Terminal', digital: 84, response: '2 min 21 sec', trend: 9 },
+  { name: 'Wayne Terminal', digital: 76, response: '2 min 47 sec', trend: 12 },
+];
 
 const VEH_KEY = { passenger_door: 'Doors', brakes: 'Brakes', warning_indicator: 'Warning lights', accessibility_equipment: 'Wheelchair equipment', hvac: 'HVAC' };
 const FAC_KEY = { trash: 'Trash', broken_glass: 'Broken shelter glass', lighting: 'Lighting', graffiti: 'Graffiti', sign_damage: 'Sign damage' };
@@ -171,7 +177,24 @@ export default function Analytics() {
             <div className="stack-sm"><span className="eyebrow">By garage</span><Bars rows={WEEK.adoptionGarage} max={100} suffix="%" target={85} color="#0f7a6d" /></div>
             <div className="stack-sm"><span className="eyebrow">By shift</span><Bars rows={WEEK.adoptionShift} max={100} suffix="%" target={85} color="#0f7a6d" /></div>
           </div>
-          <div className="panel-b" style={{ paddingTop: 0 }}>
+          <div className="table-wrap" style={{ borderTop: '1px solid var(--line)' }}>
+            <table className="table" style={{ minWidth: 560 }}>
+              <thead><tr><th>Garage</th><th>Digital</th><th>Paper</th><th>Avg response</th><th>Unresolved now</th><th>Trend (4 wk)</th></tr></thead>
+              <tbody>
+                {GARAGE_DETAIL.map((g) => (
+                  <tr key={g.name} style={{ cursor: 'default' }}>
+                    <td style={{ fontWeight: 700 }}>{g.name}</td>
+                    <td className="num">{g.digital}%</td>
+                    <td className="num muted">{100 - g.digital}%</td>
+                    <td className="num">{g.response}</td>
+                    <td className="num">{tickets.filter((t) => isOpen(t) && t.garage === g.name).length}</td>
+                    <td className="num" style={{ color: 'var(--ok)', fontWeight: 700 }}>▲ {g.trend} pts</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="panel-b">
             <div className="notice notice-info small">Adoption is reported at team level (garage, shift, route) only. It is not an individual operator performance tool.</div>
           </div>
         </section>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
+import { recommendedAction } from '../services/ai.js';
 import { useStore, startWork, isOpen } from '../services/store.js';
 import { DEPARTMENTS, deptLabel } from '../lib/config.js';
 import { routeLabel, stopById } from '../services/maps.js';
@@ -96,6 +97,7 @@ export default function DeptQueue({ dept }) {
                 </dl>
                 <blockquote className="quote" style={{ fontSize: 15 }}>“{sel.originalText}”</blockquote>
                 <div className="small"><b>AI summary:</b> {sel.ai.summary}</div>
+                <div className="rec"><b style={{ flex: 'none' }}>Next step</b><span>{sel.ai.recommended_action || recommendedAction(sel.ai)}</span></div>
                 {sel.photo && <div className="ev-photo"><img src={sel.photo} alt="Operator photo" /></div>}
 
                 <div className="stack-sm">

@@ -4,7 +4,7 @@ import { useStore, dashboardStats, patternAlerts, isOpen } from '../services/sto
 import DashShell from '../components/DashShell.jsx';
 import IssueMap from '../components/IssueMap.jsx';
 import TicketTable, { sortQueue, useNow } from '../components/TicketTable.jsx';
-import { StatCard, PatternAlerts, ActivityFeed } from '../components/Widgets.jsx';
+import { StatCard, PatternAlerts, ActivityFeed, CrewPanel } from '../components/Widgets.jsx';
 import { startOfDay } from '../lib/time.js';
 
 const FILTERS = [
@@ -74,7 +74,11 @@ export default function Dashboard({ compact }) {
         <div className="stack" style={{ gap: 16 }}>
           <section className="panel">
             <div className="panel-h"><h2>AI Pattern Alerts</h2><span className="tag">{alerts.length}</span></div>
-            <div className="panel-b"><PatternAlerts alerts={alerts} limit={4} now={now} /></div>
+            <div className="panel-b"><PatternAlerts alerts={alerts} limit={3} now={now} /></div>
+          </section>
+          <section className="panel">
+            <div className="panel-h"><h2>Crew Assignments</h2><span className="small muted">Active jobs · resolved today</span></div>
+            <CrewPanel tickets={tickets} now={now} />
           </section>
         </div>
       </div>
