@@ -1,0 +1,10 @@
+{
+  "name": "SMART Ops AI (Demo)",
+  "short_name": "Ops AI",
+  "description": "Demo transit operations reporting system. Concept prototype.",
+  "start_url": "/#/operator",
+  "display": "standalone",
+  "background_color": "#0e2744",
+  "theme_color": "#0e2744",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

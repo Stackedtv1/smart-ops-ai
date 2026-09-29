@@ -1,0 +1,21 @@
+{
+  "_note": "Stop IDs are fictional demo identifiers. Locations are approximate intersections along real SMART corridors.",
+  "stops": [
+    { "id": "1301", "name": "Woodward & 13 Mile", "lat": 42.5190, "lng": -83.1980, "routes": ["461", "462"], "road": ["woodward"], "cross": ["13 mile", "thirteen mile"] },
+    { "id": "1120", "name": "Woodward & 14 Mile", "lat": 42.5335, "lng": -83.2100, "routes": ["461", "462"], "road": ["woodward"], "cross": ["14 mile", "fourteen mile"] },
+    { "id": "1528", "name": "Woodward & Maple", "lat": 42.5470, "lng": -83.2140, "routes": ["461", "462"], "road": ["woodward"], "cross": ["maple", "15 mile"] },
+    { "id": "1204", "name": "Woodward & 12 Mile", "lat": 42.5050, "lng": -83.1790, "routes": ["461", "462"], "road": ["woodward"], "cross": ["12 mile", "twelve mile"] },
+    { "id": "382", "name": "Woodward & 9 Mile", "lat": 42.4610, "lng": -83.1340, "routes": ["461", "462"], "road": ["woodward"], "cross": ["9 mile", "nine mile"] },
+    { "id": "1045", "name": "Woodward & 8 Mile", "lat": 42.4467, "lng": -83.1180, "routes": ["461", "462"], "road": ["woodward"], "cross": ["8 mile", "eight mile"] },
+    { "id": "2210", "name": "Michigan & Wyoming", "lat": 42.3210, "lng": -83.1650, "routes": ["261"], "road": ["michigan"], "cross": ["wyoming"] },
+    { "id": "2240", "name": "Michigan & Greenfield", "lat": 42.3180, "lng": -83.2000, "routes": ["261"], "road": ["michigan"], "cross": ["greenfield"] },
+    { "id": "2290", "name": "Michigan & Telegraph", "lat": 42.3000, "lng": -83.2770, "routes": ["261"], "road": ["michigan"], "cross": ["telegraph"] },
+    { "id": "5012", "name": "Joseph Campau & Caniff", "lat": 42.4020, "lng": -83.0550, "routes": ["500"], "road": ["joseph campau", "campau"], "cross": ["caniff"] },
+    { "id": "5040", "name": "Mound & 7 Mile", "lat": 42.4320, "lng": -83.0280, "routes": ["500"], "road": ["mound"], "cross": ["7 mile", "seven mile"] },
+    { "id": "5100", "name": "Bel Air Center", "lat": 42.4460, "lng": -83.0215, "routes": ["500", "510"], "road": ["bel air", "belair"], "cross": ["bel air", "belair", "center"] },
+    { "id": "918", "name": "Van Dyke & 12 Mile", "lat": 42.5040, "lng": -83.0270, "routes": ["510"], "road": ["van dyke"], "cross": ["12 mile", "twelve mile"] },
+    { "id": "940", "name": "Van Dyke & 14 Mile", "lat": 42.5340, "lng": -83.0280, "routes": ["510"], "road": ["van dyke"], "cross": ["14 mile", "fourteen mile"] },
+    { "id": "4940", "name": "Dequindre & 12 Mile", "lat": 42.5050, "lng": -83.0870, "routes": ["494"], "road": ["dequindre"], "cross": ["12 mile", "twelve mile"] },
+    { "id": "2505", "name": "Ford Rd & Telegraph", "lat": 42.3300, "lng": -83.2750, "routes": ["250"], "road": ["ford"], "cross": ["telegraph"] }
+  ]
+}

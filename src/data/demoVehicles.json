@@ -1,0 +1,24 @@
+{
+  "_note": "Fleet numbers are fictional demo identifiers, not actual SMART vehicles.",
+  "garages": [
+    { "id": "oakland", "name": "Oakland Terminal", "county": "Oakland" },
+    { "id": "macomb", "name": "Macomb Terminal", "county": "Macomb" },
+    { "id": "wayne", "name": "Wayne Terminal", "county": "Wayne" }
+  ],
+  "vehicles": [
+    { "fleet_number": "4602", "garage": "oakland", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "461" },
+    { "fleet_number": "4128", "garage": "oakland", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "462" },
+    { "fleet_number": "4210", "garage": "oakland", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "462" },
+    { "fleet_number": "3852", "garage": "macomb", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "494" },
+    { "fleet_number": "3987", "garage": "macomb", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "510" },
+    { "fleet_number": "3990", "garage": "macomb", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "510" },
+    { "fleet_number": "4490", "garage": "macomb", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "510" },
+    { "fleet_number": "4731", "garage": "macomb", "vehicle_type": "35 ft low-floor", "status": "in_service", "route": "500" },
+    { "fleet_number": "4415", "garage": "wayne", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "261" },
+    { "fleet_number": "4588", "garage": "wayne", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "261" },
+    { "fleet_number": "4077", "garage": "wayne", "vehicle_type": "40 ft low-floor", "status": "in_service", "route": "250" }
+  ],
+  "operators": [
+    { "id": "DEMO-1047", "name": "Marcus Johnson", "garage": "oakland", "bus": "4602", "route": "461", "stopId": "1301", "shift": "Morning" }
+  ]
+}

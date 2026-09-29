@@ -1,0 +1,101 @@
+import { useEffect } from 'react';
+import { routeById } from '../services/maps.js';
+
+const P = {
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" /></>,
+  bus: <><rect x="4" y="3" width="16" height="15" rx="3" /><path d="M4 10h16M8 21v-3M16 21v-3M8 14h.01M16 14h.01" /></>,
+  shelter: <><path d="M3 6h18M5 6v14M19 6v14M8 11h8v5H8z" /></>,
+  shield: <><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M12 8v5M12 16h.01" /></>,
+  camera: <><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></>,
+  check: <><path d="M5 12.5l4.5 4.5L19 7.5" /></>,
+  alert: <><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18h.01" /></>,
+  pin: <><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" /></>,
+  clipboard: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4h6v3H9zM9 12l2 2 4-4" /></>,
+  list: <><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></>,
+  back: <><path d="M15 5l-7 7 7 7" /></>,
+  chevron: <><path d="M9 5l7 7-7 7" /></>,
+  keyboard: <><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>,
+  stop: <><rect x="6" y="6" width="12" height="12" rx="2" /></>,
+  sparkle: <><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></>,
+  phone: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></>,
+  wrench: <><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z" /></>,
+};
+
+export function Icon({ name, size = 20, stroke = 2, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {P[name]}
+    </svg>
+  );
+}
+
+export function DemoFlag({ text = 'Demo / Concept System' }) {
+  return <span className="demo-flag">{text}</span>;
+}
+
+export function PriorityPill({ p, resolved }) {
+  if (resolved) return <span className="pill p-resolved">Resolved</span>;
+  return <span className={`pill p-${p}`}>{p}</span>;
+}
+
+const S = { New: 's-new', Assigned: 's-assigned', 'In Progress': 's-progress', Resolved: 's-resolved' };
+export function StatusPill({ s }) {
+  return <span className={`status ${S[s] || ''}`}>{s}</span>;
+}
+
+export function RouteBadge({ id }) {
+  const r = routeById(id);
+  return (
+    <span className="route-badge" style={{ background: r?.color || '#445' }} title={r ? `${r.id} ${r.name}` : ''}>
+      {id}
+    </span>
+  );
+}
+
+export function Modal({ title, onClose, children, footer }) {
+  useEffect(() => {
+    const k = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [onClose]);
+  return (
+    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="panel-h">
+          <h3>{title}</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="panel-b stack">{children}</div>
+        {footer && <div className="panel-b row" style={{ justifyContent: 'flex-end', borderTop: '1px solid var(--line)' }}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+export const PRIORITY_COLOR = { high: 'var(--high)', medium: 'var(--med)', low: 'var(--low)' };
+
+// Downscale a camera photo so it can travel with the ticket.
+export function readPhoto(file, max = 1024) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = reject;
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => resolve(fr.result);
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k);
+        c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        try {
+          resolve(c.toDataURL('image/jpeg', 0.72));
+        } catch {
+          resolve(fr.result);
+        }
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
