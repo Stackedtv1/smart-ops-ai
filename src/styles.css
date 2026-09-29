@@ -526,3 +526,8 @@ p { margin: 0; }
 .cp-strip:hover { border-color: var(--accent); }
 .cp-latest { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
 .cp-open { font-weight: 800; color: var(--accent); margin-left: auto; }
+
+.mode-badge { display: inline-flex; flex-direction: column; gap: 1px; padding: 4px 10px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--flag) 70%, transparent); background: color-mix(in srgb, var(--flag) 16%, var(--surface)); color: var(--ink); font-size: 11.5px; line-height: 1.35; letter-spacing: .01em; }
+.mode-badge b { font-weight: 800; letter-spacing: .06em; }
+.mode-badge .mode-row:last-child:not(:first-child) { color: var(--ink-2); }
+.mode-badge.compact { padding: 2px 8px; font-size: 11px; }

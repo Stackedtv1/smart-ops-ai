@@ -6,7 +6,7 @@ import { GTFS_META } from '../services/maps.js';
 import { fmtTime, ago } from '../lib/time.js';
 import DashShell from '../components/DashShell.jsx';
 import { useNow } from '../components/TicketTable.jsx';
-import { Icon } from '../components/ui.jsx';
+import { Icon, MonitorModeBadge } from '../components/ui.jsx';
 import { answerLocal, snapshotForAI, runBrakeScenario, sweep, undoEntry, DEVICES, THRESHOLDS, SWEEP_MS } from '../services/copilot.js';
 
 const KIND = {
@@ -155,7 +155,10 @@ export default function Copilot() {
     <DashShell active="/copilot">
       <div className="row between wrap" style={{ alignItems: 'flex-end' }}>
         <div>
-          <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.02em' }}>AI Operations Copilot</h1>
+          <div className="row wrap" style={{ gap: 12 }}>
+            <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.02em' }}>AI Operations Copilot</h1>
+            <MonitorModeBadge />
+          </div>
           <div className="small muted">Watches tickets, feeds and devices 24/7. Fixes workflow problems itself; sends vehicle and safety decisions to people.</div>
         </div>
         <div className="row wrap" style={{ gap: 8 }}>

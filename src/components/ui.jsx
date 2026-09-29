@@ -100,3 +100,14 @@ export function readPhoto(file, max = 1024) {
     fr.readAsDataURL(file);
   });
 }
+
+// Shown next to the Copilot everywhere it appears, so nobody wonders whether
+// the monitoring runs with the browser closed.
+export function MonitorModeBadge({ compact }) {
+  return (
+    <span className={`mode-badge ${compact ? 'compact' : ''}`} title="In this demo the Copilot runs in the open browser. In production it runs on a server around the clock.">
+      <span className="mode-row"><b>DEMO MODE</b> — monitoring every 15 sec</span>
+      {!compact && <span className="mode-row">Production: 24/7 server-side monitoring</span>}
+    </span>
+  );
+}

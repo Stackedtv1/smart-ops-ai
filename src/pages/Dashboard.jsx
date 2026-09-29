@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { useStore, dashboardStats, patternAlerts, isOpen } from '../services/store.js';
 import DashShell from '../components/DashShell.jsx';
+import { MonitorModeBadge } from '../components/ui.jsx';
 import IssueMap from '../components/IssueMap.jsx';
 import TicketTable, { sortQueue, useNow } from '../components/TicketTable.jsx';
 import { StatCard, PatternAlerts, ActivityFeed, CrewPanel } from '../components/Widgets.jsx';
@@ -24,7 +25,7 @@ function CopilotStrip() {
   const latest = c.incidents[0];
   return (
     <button className="cp-strip" onClick={() => go('/copilot')}>
-      <span className="row" style={{ gap: 8, flex: 'none' }}><span className="live-dot" /><b>AI Ops Copilot</b></span>
+      <span className="row wrap" style={{ gap: 8, minWidth: 0 }}><span className="live-dot" /><b>AI Ops Copilot</b><MonitorModeBadge compact /></span>
       <span className="num"><b>{fixes}</b> auto-fixes</span>
       <span className="num"><b>{esc}</b> escalation{esc === 1 ? '' : 's'} awaiting a person</span>
       {latest && <span className="grow cp-latest">Latest: {latest.title}</span>}
