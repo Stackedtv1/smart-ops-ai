@@ -33,14 +33,21 @@ function Breakdown({ r }) {
   );
 }
 
+const pct = (x) => (x == null ? '—' : `${Math.round(x)}%`);
+
 function Headline({ r, v }) {
   return (
-    <div className="stat-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-      <div className="stat lead"><div className="n">{fmtMoney(r.total)}</div><div className="l">Estimated annual value</div></div>
-      <div className="stat"><div className="n">{fmtMoney(r.net)}</div><div className="l">Net after {fmtMoney(v.annualCost)} system cost</div></div>
-      <div className="stat"><div className="n">{r.paybackMonths == null ? '—' : `${r.paybackMonths.toFixed(1)} mo`}</div><div className="l">Payback period</div></div>
-      <div className="stat"><div className="n">{r.roiPct == null ? '—' : `${Math.round(r.roiPct)}%`}</div><div className="l">First-year ROI</div></div>
-    </div>
+    <>
+      <div className="stat-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        <div className="stat lead"><div className="n">{fmtMoney(r.total)}</div><div className="l">Estimated annual value</div></div>
+        <div className="stat"><div className="n">{fmtMoney(r.net)}</div><div className="l">Year-1 net after {fmtMoney(r.year1Cost)} ({fmtMoney(v.annualCost)} license + {fmtMoney(r.impl)} implementation)</div></div>
+        <div className="stat"><div className="n">{r.paybackMonths == null ? '—' : `${r.paybackMonths.toFixed(1)} mo`}</div><div className="l">Payback on year-1 cost</div></div>
+        <div className="stat"><div className="n">{pct(r.roiPct)}</div><div className="l">First-year ROI</div></div>
+      </div>
+      <div className="small muted" style={{ marginTop: -4 }}>
+        Year 2 onward (license only): net <b className="num" style={{ color: 'var(--ink)' }}>{fmtMoney(r.ongoingNet)}</b> per year · ROI <b className="num" style={{ color: 'var(--ink)' }}>{pct(r.ongoingRoiPct)}</b>. Pricing shown is an illustrative starting point; final pricing depends on fleet size, garages, integrations and support.
+      </div>
+    </>
   );
 }
 
@@ -145,9 +152,12 @@ export function ROICalculator() {
                 <div className="display num" style={{ fontSize: 46, fontWeight: 700, lineHeight: 1 }}>{fmtMoney(r.total)}</div>
               </div>
               <dl className="kv">
-                <dt>System cost</dt><dd className="num">{fmtMoney(v.annualCost)}</dd>
-                <dt>Net benefit</dt><dd className="num" style={{ color: r.net >= 0 ? 'var(--ok)' : 'var(--high)' }}>{fmtMoney(r.net)}</dd>
-                <dt>First-year ROI</dt><dd className="num">{r.roiPct == null ? '—' : `${Math.round(r.roiPct)}%`}</dd>
+                <dt>Annual license</dt><dd className="num">{fmtMoney(v.annualCost)}</dd>
+                <dt>Implementation (one-time)</dt><dd className="num">{fmtMoney(r.impl)}</dd>
+                <dt>Year-1 net</dt><dd className="num" style={{ color: r.net >= 0 ? 'var(--ok)' : 'var(--high)' }}>{fmtMoney(r.net)}</dd>
+                <dt>First-year ROI</dt><dd className="num">{pct(r.roiPct)}</dd>
+                <dt>Year 2+ net / yr</dt><dd className="num" style={{ color: r.ongoingNet >= 0 ? 'var(--ok)' : 'var(--high)' }}>{fmtMoney(r.ongoingNet)}</dd>
+                <dt>Year 2+ ROI</dt><dd className="num">{pct(r.ongoingRoiPct)}</dd>
                 <dt>Payback</dt><dd className="num">{r.paybackMonths == null ? '—' : `${r.paybackMonths.toFixed(1)} months`}</dd>
                 <dt>Staff capacity</dt><dd className="num">{fmtNum(r.hoursReturned)} hrs ({r.fte.toFixed(1)} FTE)</dd>
                 <dt>Delay removed</dt><dd className="num">{fmtNum(r.delayHoursRemoved)} report-hours</dd>
@@ -160,6 +170,7 @@ export function ROICalculator() {
             <span>Paperwork = reports × days × (paper − digital minutes) × labor rate.</span>
             <span>Missed defects = road calls × 12 × preventable share × cost per call.</span>
             <span>Downtime = vehicle-defect reports that hold a bus × hours saved × bus-hour cost.</span>
+            <span>Year 1 cost = annual license + one-time implementation. Year 2+ = license only.</span>
             <span>Routing delay is shown for context and not counted as dollars, to avoid double counting.</span>
           </section>
         </div>

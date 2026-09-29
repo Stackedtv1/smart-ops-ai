@@ -23,7 +23,8 @@ export const FIELDS = [
   { group: 'Downtime', key: 'downtimeSavedHrs', label: 'Downtime saved per held bus (faster routing)', unit: 'hrs', min: 0, max: 8, step: 0.25 },
   { group: 'Downtime', key: 'busHourCost', label: 'Cost of a bus-hour out of service', unit: '$/hr', min: 20, max: 250, step: 5 },
 
-  { group: 'System cost', key: 'annualCost', label: 'Annual SMART Ops AI cost (subscription + support)', unit: '$', min: 0, max: 500000, step: 1000 },
+  { group: 'System cost', key: 'annualCost', label: 'Annual SMART Ops AI license (subscription + support)', unit: '$', min: 0, max: 500000, step: 1000 },
+  { group: 'System cost', key: 'implCost', label: 'One-time implementation & integration (year 1 only)', unit: '$', min: 0, max: 200000, step: 1000 },
 ];
 
 export const PRESETS = {
@@ -31,13 +32,13 @@ export const PRESETS = {
     label: 'Conservative',
     reportsPerDay: 20, daysPerYear: 360, paperMin: 8, digitalMin: 3, laborRate: 45,
     paperDelayHrs: 4, digitalDelayMin: 5, roadCallsPerMonth: 30, preventablePct: 5, roadCallCost: 800,
-    vehicleSharePct: 43, holdsBusPct: 10, downtimeSavedHrs: 0.5, busHourCost: 60, annualCost: 60000,
+    vehicleSharePct: 43, holdsBusPct: 10, downtimeSavedHrs: 0.5, busHourCost: 60, annualCost: 90000, implCost: 30000,
   },
   expected: {
     label: 'Expected',
     reportsPerDay: 30, daysPerYear: 360, paperMin: 14, digitalMin: 3, laborRate: 52,
     paperDelayHrs: 6, digitalDelayMin: 3, roadCallsPerMonth: 40, preventablePct: 10, roadCallCost: 1200,
-    vehicleSharePct: 43, holdsBusPct: 15, downtimeSavedHrs: 1, busHourCost: 85, annualCost: 60000,
+    vehicleSharePct: 43, holdsBusPct: 15, downtimeSavedHrs: 1, busHourCost: 85, annualCost: 90000, implCost: 30000,
   },
 };
 
@@ -56,15 +57,20 @@ export function computeRoi(v) {
   const delayHoursRemoved = reportsYr * Math.max(0, v.paperDelayHrs - v.digitalDelayMin / 60);
 
   const total = paperwork + missedDefects + downtime;
-  const net = total - v.annualCost;
-  const roiPct = v.annualCost > 0 ? (net / v.annualCost) * 100 : null;
-  const paybackMonths = total > 0 ? (v.annualCost / total) * 12 : null;
+  // Year 1 carries the one-time implementation fee; later years pay the license only.
+  const impl = v.implCost || 0;
+  const year1Cost = v.annualCost + impl;
+  const net = total - year1Cost;
+  const roiPct = year1Cost > 0 ? (net / year1Cost) * 100 : null;
+  const ongoingNet = total - v.annualCost;
+  const ongoingRoiPct = v.annualCost > 0 ? (ongoingNet / v.annualCost) * 100 : null;
+  const paybackMonths = total > 0 ? (year1Cost / total) * 12 : null;
 
   return {
     reportsYr, hoursReturned, fte: hoursReturned / 2080, paperwork,
     roadCallsAvoided, missedDefects, heldBuses, busHoursSaved, downtime,
     delayHoursRemoved, speedup: (v.paperDelayHrs * 60) / Math.max(1, v.digitalDelayMin),
-    total, net, roiPct, paybackMonths,
+    total, impl, year1Cost, net, roiPct, ongoingNet, ongoingRoiPct, paybackMonths,
     lines: [
       { key: 'paperwork', label: 'Reduced paperwork', value: paperwork, note: `${fmtNum(hoursReturned)} staff hours returned (${(hoursReturned / 2080).toFixed(1)} FTE)` },
       { key: 'missed', label: 'Fewer missed defects', value: missedDefects, note: `${fmtNum(roadCallsAvoided)} road calls avoided per year` },
@@ -77,7 +83,7 @@ export const fmtMoney = (n) => (Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M`
 export const fmtNum = (n) => Math.round(n).toLocaleString();
 
 // --- shared, remembered inputs (summary + calculator read the same values) ---
-const KEY = 'smart-ops-ai.roi.v1';
+const KEY = 'smart-ops-ai.roi.v2'; // v2: $90k license + implementation fee
 const listeners = new Set();
 let state = (() => {
   try {
