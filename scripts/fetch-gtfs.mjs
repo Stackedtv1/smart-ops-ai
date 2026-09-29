@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'src/data/gtfs.generated.json');
+const STATUS = path.join(ROOT, 'public/gtfs-status.json');
+const writeStatus = (o) => { try { fs.writeFileSync(STATUS, JSON.stringify({ checkedAt: new Date().toISOString(), ...o }, null, 2)); } catch { /* ignore */ } };
 const ROUTES = (process.env.GTFS_ROUTES || '250,261,461,462,494,500,510').split(',').map((s) => s.trim());
 const AGENCY = process.env.GTFS_AGENCY || 'SMART';
 const URLS = [
@@ -214,9 +216,11 @@ async function main() {
     fs.writeFileSync(OUT, JSON.stringify(data));
     console.log(`[gtfs] wrote ${found.length} routes (${found.join(', ')}) and ${data.stops.length} stops; feed ${data.feedVersion || '?'} ${data.feedStart || ''}-${data.feedEnd || ''}`);
     if (missing.length) console.log(`[gtfs] not in feed, using simplified lines: ${missing.join(', ')}`);
+    writeStatus({ ok: true, source: data.source, feedVersion: data.feedVersion, feedStart: data.feedStart, feedEnd: data.feedEnd, routes: data.routes.map((r) => ({ id: r.id, name: r.longName, points: r.path.length, stops: r.stopCount })), stops: data.stops.length, missing });
   } catch (e) {
     console.warn(`[gtfs] could not refresh SMART GTFS (${e.message}). Keeping previous data / fallback.`);
     if (!fs.existsSync(OUT)) fs.writeFileSync(OUT, JSON.stringify({ source: 'none', routes: [], stops: [] }));
+    writeStatus({ ok: false, error: e.message });
   }
 }
 
