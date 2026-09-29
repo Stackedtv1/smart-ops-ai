@@ -137,10 +137,14 @@ function persist() {
   }
 }
 
-let state = load() || freshState();
+const LIVE = remote.supabaseEnabled();
+const IS_BROWSER = typeof window !== 'undefined';
+
+let state = { ...(load() || freshState()), liveStatus: LIVE ? 'connecting' : 'local' };
 
 let channel = null;
 try {
+  if (!IS_BROWSER) throw new Error('no channel on the server');
   channel = new BroadcastChannel('smart-ops-ai');
   channel.onmessage = (e) => {
     if (!e.data?.state || e.data.from === TAB) return;
@@ -160,10 +164,12 @@ function notify() {
 function emit(ev) {
   eventListeners.forEach((l) => l(ev));
 }
-function commit(next, { broadcast = true } = {}) {
+function commit(next, { broadcast = true, fromRemote = false } = {}) {
+  const prev = state;
   state = next;
   persist();
   notify();
+  if (LIVE && !fromRemote) queueMetaSave(prev, next);
   if (broadcast && channel) {
     try {
       channel.postMessage({ from: TAB, state });
@@ -182,6 +188,15 @@ export function onEvent(fn) {
   return () => eventListeners.delete(fn);
 }
 export const getState = () => state;
+export const isLive = () => LIVE;
+
+// Server-side Guardian: load a state snapshot without persisting or syncing.
+export function hydrate(next) {
+  state = { ...freshShape(), ...next };
+}
+function freshShape() {
+  return { day: dayKey(), seq: FIRST_LIVE_SEQ, tickets: [], scenarioLoaded: false, liveCount: 0, guardian: emptyGuardian(), fleet: emptyFleet() };
+}
 
 export function useStore(selector = (s) => s) {
   const s = useSyncExternalStore(subscribe, getState, getState);
@@ -208,32 +223,134 @@ export function restoreTickets(prev) {
 }
 
 // ---------------------------------------------------------------------------
-// Supabase wiring (no-op unless configured)
+// Live mode (Supabase). One shared demo for every device.
 // ---------------------------------------------------------------------------
-if (remote.supabaseEnabled()) {
+const metaVersion = { guardian: 0, fleet: 0, control: 0 };
+let metaTimer = null;
+let pendingMeta = new Set();
+let lastResetAt = 0;
+
+const controlOf = (s) => ({ day: s.day, seq: s.seq, scenarioLoaded: !!s.scenarioLoaded, liveCount: s.liveCount || 0, resetAt: lastResetAt });
+
+function queueMetaSave(prev, next) {
+  if (prev.guardian !== next.guardian) pendingMeta.add('guardian');
+  if (prev.fleet !== next.fleet) pendingMeta.add('fleet');
+  if (prev.seq !== next.seq || prev.scenarioLoaded !== next.scenarioLoaded) pendingMeta.add('control');
+  if (!pendingMeta.size) return;
+  clearTimeout(metaTimer);
+  metaTimer = setTimeout(flushMeta, 250);
+}
+
+export async function flushMeta() {
+  clearTimeout(metaTimer);
+  const keys = [...pendingMeta];
+  pendingMeta = new Set();
+  await Promise.all(keys.map((k) => {
+    metaVersion[k] += 1;
+    const value = k === 'control' ? controlOf(state) : state[k];
+    return remote.saveMeta(k, value, metaVersion[k]);
+  }));
+}
+
+function maxSeqToday(tickets) {
+  const today = startOfDay();
+  return tickets.filter((t) => t.createdAt >= today).reduce((m, t) => Math.max(m, (t.seq || 0) + 1), FIRST_LIVE_SEQ);
+}
+
+async function seedRemote(fresh) {
+  lastResetAt = Date.now();
+  await remote.deleteAllTickets();
+  await remote.upsertTickets(fresh.tickets);
+  metaVersion.guardian += 1;
+  metaVersion.fleet += 1;
+  metaVersion.control += 1;
+  await Promise.all([
+    remote.saveMeta('guardian', fresh.guardian, metaVersion.guardian),
+    remote.saveMeta('fleet', fresh.fleet, metaVersion.fleet),
+    remote.saveMeta('control', controlOf(fresh), metaVersion.control),
+  ]);
+}
+
+async function loadRemote({ initial = false } = {}) {
+  const data = await remote.fetchAll();
+  if (!data) {
+    commit({ ...state, liveStatus: 'offline' }, { fromRemote: true });
+    return false;
+  }
+  const control = data.meta.control?.value;
+  if (!data.tickets.length || control?.day !== dayKey()) {
+    // First visitor of the day (or an empty database) seeds the shared demo.
+    const fresh = freshState();
+    await seedRemote(fresh);
+    commit({ ...fresh, liveStatus: 'live' }, { fromRemote: true });
+    return true;
+  }
+  for (const k of ['guardian', 'fleet', 'control']) metaVersion[k] = data.meta[k]?.version || 0;
+  lastResetAt = control?.resetAt || 0;
+  commit(
+    {
+      ...state,
+      day: control.day,
+      tickets: data.tickets.sort((a, b) => a.createdAt - b.createdAt),
+      guardian: data.meta.guardian?.value || emptyGuardian(),
+      fleet: data.meta.fleet?.value || emptyFleet(),
+      seq: Math.max(control.seq || FIRST_LIVE_SEQ, maxSeqToday(data.tickets)),
+      scenarioLoaded: !!control.scenarioLoaded,
+      liveCount: control.liveCount || 0,
+      liveStatus: 'live',
+    },
+    { fromRemote: true }
+  );
+  if (!initial) emit({ type: 'reloaded' });
+  return true;
+}
+
+if (LIVE && IS_BROWSER) {
   (async () => {
-    const rows = await remote.fetchTickets();
-    if (rows === null) return;
-    if (rows.length === 0) {
-      await remote.upsertTickets(state.tickets);
-    } else {
-      const maxSeq = rows.filter((t) => t.createdAt >= startOfDay()).reduce((m, t) => Math.max(m, t.seq + 1), FIRST_LIVE_SEQ);
-      commit({ ...state, tickets: rows, seq: maxSeq }, { broadcast: false });
-    }
-    remote.subscribeTickets((t) => {
-      const exists = state.tickets.some((x) => x.id === t.id);
-      const tickets = exists ? state.tickets.map((x) => (x.id === t.id ? t : x)) : [...state.tickets, t];
-      const seq = t.createdAt >= startOfDay() ? Math.max(state.seq, t.seq + 1) : state.seq;
-      commit({ ...state, tickets, seq }, { broadcast: false });
-      if (!exists) emit({ type: 'created', ticket: t });
+    const ok = await loadRemote({ initial: true });
+    if (!ok) return;
+    remote.subscribeAll({
+      onTicket: (t) => {
+        const exists = state.tickets.some((x) => x.id === t.id);
+        const tickets = exists ? state.tickets.map((x) => (x.id === t.id ? t : x)) : [...state.tickets, t];
+        commit({ ...state, tickets, seq: Math.max(state.seq, maxSeqToday([t])) }, { fromRemote: true });
+        if (!exists) emit({ type: 'created', ticket: t });
+      },
+      onTicketDeleted: (id) => {
+        if (!id) return;
+        commit({ ...state, tickets: state.tickets.filter((t) => t.id !== id) }, { fromRemote: true });
+      },
+      onMeta: (key, value, version) => {
+        if (value == null) { loadRemote(); return; } // row too large for realtime: fetch it
+        if (version <= (metaVersion[key] || 0) && key !== 'control') return; // our own write echoing back
+        metaVersion[key] = Math.max(metaVersion[key] || 0, version);
+        if (key === 'guardian') {
+          const known = new Set((state.guardian?.incidents || []).map((i) => i.id));
+          const hadSwept = (state.guardian?.sweeps || 0) > 0;
+          commit({ ...state, guardian: value }, { fromRemote: true });
+          if (hadSwept) (value.incidents || []).filter((i) => !known.has(i.id)).reverse().forEach((incident) => emit({ type: 'guardian', incident }));
+        } else if (key === 'fleet') {
+          commit({ ...state, fleet: value }, { fromRemote: true });
+        } else if (key === 'control') {
+          if (value?.resetAt && value.resetAt !== lastResetAt) {
+            lastResetAt = value.resetAt;
+            loadRemote(); // another screen reset the demo
+          } else {
+            commit({ ...state, seq: Math.max(state.seq, value?.seq || 0), scenarioLoaded: !!value?.scenarioLoaded }, { fromRemote: true });
+          }
+        }
+      },
     });
   })();
 }
 
-function pushRemote(t, newEvents = []) {
-  if (!remote.supabaseEnabled()) return;
+const syncs = new Map();
+// Resolves once a ticket created on this screen has reached the shared database.
+export const waitForSync = (id) => syncs.get(id) || Promise.resolve();
+
+function pushRemote(t) {
+  if (!LIVE || !IS_BROWSER) return;
   remote.upsertTickets([t]);
-  newEvents.forEach((ev) => remote.insertStatusEvent(t.id, ev));
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +358,7 @@ function pushRemote(t, newEvents = []) {
 // ---------------------------------------------------------------------------
 export function createTicket({ text, reportType, inputMode, photo, vehicle, route, operatorId, operatorName, position, ai, location, createdAt }) {
   const now = createdAt || Date.now();
-  const seq = state.seq;
+  const seq = Math.max(state.seq, maxSeqToday(state.tickets));
   const id = ticketId(now, seq);
   const loc = location || resolveLocation(text, position);
   const base = ai || classifyLocal({ text, reportType });
@@ -265,21 +382,7 @@ export function createTicket({ text, reportType, inputMode, photo, vehicle, rout
   };
   commit({ ...state, seq: seq + 1, tickets: [...state.tickets, t], liveCount: (state.liveCount || 0) + 1 });
   emit({ type: 'created', ticket: t });
-  if (remote.supabaseEnabled()) {
-    (async () => {
-      let final = t;
-      if (t.photo?.startsWith('data:')) {
-        const url = await remote.uploadPhoto(t.photo, t.id);
-        if (url !== t.photo) {
-          final = { ...t, photo: url };
-          commit({ ...state, tickets: state.tickets.map((x) => (x.id === t.id ? final : x)) });
-        }
-      }
-      await remote.upsertTickets([final]);
-      remote.insertReport(final);
-      tl.forEach((ev) => remote.insertStatusEvent(t.id, ev));
-    })();
-  }
+  if (LIVE && IS_BROWSER) syncs.set(t.id, remote.upsertTickets([t]).then(() => flushMeta()));
   return t;
 }
 
@@ -298,7 +401,7 @@ function mutate(id, fn, events = []) {
   });
   if (!updated) return null;
   commit({ ...state, tickets });
-  pushRemote(updated, events.map((e) => ({ at: now, ...e })));
+  pushRemote(updated);
   return updated;
 }
 
@@ -337,10 +440,10 @@ export function resolveTicket(id, note, photo, by) {
   );
 }
 
-export function resetDemo() {
+export async function resetDemo() {
   const fresh = freshState();
-  commit(fresh);
-  if (remote.supabaseEnabled()) remote.clearRemote().then(() => remote.upsertTickets(fresh.tickets));
+  commit({ ...fresh, liveStatus: state.liveStatus }, { fromRemote: true });
+  if (LIVE && IS_BROWSER) await seedRemote(fresh);
 }
 
 // ---------------------------------------------------------------------------

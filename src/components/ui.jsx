@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { routeById } from '../services/maps.js';
+import { isLive } from '../services/store.js';
 
 const P = {
   mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" /></>,
@@ -104,6 +105,14 @@ export function readPhoto(file, max = 1024) {
 // Shown next to Guardian everywhere it appears, so nobody wonders whether
 // the monitoring runs with the browser closed.
 export function MonitorModeBadge({ compact }) {
+  if (isLive()) {
+    return (
+      <span className={`mode-badge live ${compact ? 'compact' : ''}`} title="Guardian runs in a server function: every minute on a schedule, and whenever someone submits a report. It keeps running with every browser closed.">
+        <span className="mode-row"><b>LIVE</b> — Guardian runs server-side</span>
+        {!compact && <span className="mode-row">Every 60 sec + on every report · keeps running with browsers closed</span>}
+      </span>
+    );
+  }
   return (
     <span className={`mode-badge ${compact ? 'compact' : ''}`} title="In this demo Guardian runs in the open browser. In production it runs on a server around the clock.">
       <span className="mode-row"><b>DEMO MODE</b> — monitoring every 15 sec</span>

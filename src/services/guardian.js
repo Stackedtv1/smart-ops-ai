@@ -22,12 +22,17 @@ import { DEPARTMENTS, deptLabel } from '../lib/config.js';
 import { GTFS_META, MAP_STOPS, stopById } from './maps.js';
 import { recommendedAction } from './ai.js';
 import { vehicleRecord, openPmOrder, openOrderFor, sysLabel, FLEET_BUSES, FLEET_RULES } from './fleet.js';
-import { setFleet } from './store.js';
+import { setFleet, isLive, flushMeta, waitForSync } from './store.js';
+import { triggerSweep } from './supabase.js';
 import { STOPS } from './maps.js';
 import { MIN, fmtTime, fmtDate } from '../lib/time.js';
 
 export const GUARDIAN = 'SMART Ops AI Guardian';
 export const SWEEP_MS = 15000;
+// Live mode: Guardian runs in a Netlify function. It runs every minute on a
+// schedule (browsers closed or not) and whenever a screen asks for a check.
+export const LIVE_SCHEDULE_SEC = 60;
+export const LIVE_POKE_MS = 20000;
 export const THRESHOLDS = {
   safetyAckMin: 10, // safety report with no human acknowledgement
   highStartMin: 45, // high-priority job assigned but not started
@@ -502,7 +507,18 @@ export function simulateServiceDays(days = 3) {
     }
     return { ...f, extraMiles, simulatedDays: (f.simulatedDays || 0) + days };
   });
-  setTimeout(sweep, 600);
+  if (isLive()) flushMeta().then(() => triggerSweep());
+  else setTimeout(sweep, 600);
+}
+
+// Run a check: on the server in live mode, in this browser otherwise.
+export async function runCheck() {
+  if (isLive()) {
+    await flushMeta();
+    return triggerSweep();
+  }
+  sweep();
+  return { ok: true, local: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -523,6 +539,14 @@ export function sweep() {
 let timer = null;
 export function startGuardian() {
   if (timer) return () => {};
+  if (isLive()) {
+    // The server does the work; an open screen just asks for a check every 20 s
+    // so the demo feels immediate. The scheduled run covers closed browsers.
+    const poke = () => { if (typeof document === 'undefined' || document.visibilityState === 'visible') triggerSweep(); };
+    setTimeout(poke, 3000);
+    timer = setInterval(poke, LIVE_POKE_MS);
+    return () => { clearInterval(timer); timer = null; };
+  }
   setTimeout(sweep, 1200);
   timer = setInterval(sweep, SWEEP_MS);
   return () => {
@@ -553,7 +577,8 @@ export function runBrakeScenario() {
     vehicle: '4721', route: '494', operatorId: 'DEMO-3377', operatorName: 'Victor Sims',
     position: { stopId: s?.id, lat: s?.lat, lng: s?.lng, source: 'bus position' },
   });
-  setTimeout(sweep, 2500);
+  if (isLive()) waitForSync(t.id).then(() => triggerSweep());
+  else setTimeout(sweep, 2500);
   return t;
 }
 

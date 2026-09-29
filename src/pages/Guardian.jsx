@@ -6,7 +6,8 @@ import { fmtTime, ago } from '../lib/time.js';
 import DashShell from '../components/DashShell.jsx';
 import { useNow } from '../components/TicketTable.jsx';
 import { Icon, MonitorModeBadge } from '../components/ui.jsx';
-import { runBrakeScenario, sweep, undoEntry, DEVICES, THRESHOLDS, SWEEP_MS } from '../services/guardian.js';
+import { runBrakeScenario, runCheck, undoEntry, DEVICES, THRESHOLDS, SWEEP_MS, LIVE_POKE_MS } from '../services/guardian.js';
+import { isLive } from '../services/store.js';
 
 const KIND = {
   'auto-fix': { label: 'Auto-corrected', cls: 'k-fix' },
@@ -70,7 +71,7 @@ export default function Guardian() {
   const fixes = c.audit.filter((a) => a.kind === 'auto-fix' && !a.undone).length;
   const openEsc = c.followups.filter((f) => !f.closed).length;
   const offline = DEVICES.filter((d) => now - d.seen >= THRESHOLDS.deviceOfflineMin * 60000).length;
-  const nextIn = c.lastSweep ? Math.max(0, Math.ceil((c.lastSweep + SWEEP_MS - now) / 1000)) : null;
+  const nextIn = c.lastSweep ? Math.max(0, Math.ceil((c.lastSweep + (isLive() ? LIVE_POKE_MS : SWEEP_MS) - now) / 1000)) : null;
   const incidents = c.incidents.filter((i) => filter === 'all' || (filter === 'human' ? i.humanRequired : i.kind === filter));
 
   return (
@@ -84,7 +85,7 @@ export default function Guardian() {
           <div className="small muted"><b>Guardian watches. Copilot answers.</b> Guardian monitors tickets, feeds and devices, fixes workflow problems itself, and sends vehicle and safety decisions to people.</div>
         </div>
         <div className="row wrap" style={{ gap: 8 }}>
-          <button className="btn" onClick={() => sweep()}>Run check now</button>
+          <button className="btn" onClick={() => runCheck()}>Run check now</button>
           <button className="btn btn-primary" disabled={ran} onClick={() => { runBrakeScenario(); setRan(true); }}>
             {ran ? 'Scenario running…' : 'Live scenario: Bus 4721 brake warning'}
           </button>
@@ -92,7 +93,7 @@ export default function Guardian() {
       </div>
 
       <div className="cp-status">
-        <span className="row" style={{ gap: 8 }}><span className="live-dot" /><b>Guardian active</b></span>
+        <span className="row" style={{ gap: 8 }}><span className="live-dot" /><b>{isLive() ? 'Guardian active · server-side' : 'Guardian active'}</b></span>
         <span>Last check {c.lastSweep ? ago(c.lastSweep, now) : 'starting…'}{nextIn != null ? ` · next in ${nextIn}s` : ''}</span>
         <span><b className="num">{c.sweeps || 0}</b> sweeps · <b className="num">{(c.checks || 0).toLocaleString()}</b> checks</span>
         <span><b className="num">{fixes}</b> auto-fixes</span>

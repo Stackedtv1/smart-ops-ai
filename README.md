@@ -28,15 +28,15 @@ Copy `.env.example`. Everything is optional — with nothing set, the demo runs 
 | `OPENAI_MODEL` | Netlify env | Classification model (default `gpt-4o-mini`). |
 | `OPENAI_TRANSCRIBE_MODEL` | Netlify env | Speech-to-text model (default `whisper-1`). |
 
-## Supabase (for two-device demos)
+## Live mode (shared data + server-side Guardian)
 
-1. Create a project, run `supabase/schema.sql` in the SQL editor (tables, realtime, `report-photos` bucket).
-2. Set the two `VITE_SUPABASE_*` vars in Netlify and redeploy.
-3. Phone opens `/#/operator`, laptop opens `/#/dashboard`. New tickets appear on the dashboard via Supabase Realtime.
+With `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set in Netlify, the demo is live:
 
-The schema's RLS policies allow anonymous access **for the demo only**. Replace with Supabase Auth + role policies before any pilot.
+- **One shared demo for every screen.** Tickets and Guardian/fleet state live in Supabase (`so_tickets`, `so_meta`, see `supabase/schema.sql`) and sync over Supabase Realtime. A report on a phone appears on the projector; a reset on any screen resets all of them. The first visitor each day seeds a fresh demo.
+- **Guardian runs server-side.** `netlify/functions/guardian-scheduled.js` runs every minute on Netlify's scheduler, browsers open or not. `guardian-sweep.js` runs a check on demand: after each new report, from *Run check now*, and every 20 s while a screen is open. A version check on `so_meta.guardian` makes sure two checks started at the same moment never both act.
+- The badge beside Guardian switches to **LIVE — Guardian runs server-side**. The header shows the connection state.
 
-Without Supabase, tabs in the same browser still sync (BroadcastChannel), and **Presenter Mode** shows the phone and dashboard side by side on one screen.
+Without those two variables everything runs locally in one browser, as before.
 
 ## Demo script (8–10 min)
 

@@ -3,7 +3,7 @@ import { useNav } from '../lib/router.jsx';
 import { onEvent, loadDemoScenario, resetDemo } from '../services/store.js';
 import { deptLabel } from '../lib/config.js';
 import { DemoFlag, Modal } from './ui.jsx';
-import { supabaseEnabled } from '../services/supabase.js';
+import { useStore } from '../services/store.js';
 
 const TABS = [
   { to: '/dashboard', label: 'Command' },
@@ -96,6 +96,8 @@ export default function DashShell({ active, children, compact }) {
   }, [msg]);
 
   const cur = active || path;
+  const liveStatus = useStore((st) => st.liveStatus);
+  const liveLabel = { live: 'Live · shared across every screen', connecting: 'Connecting to live data…', offline: 'Offline · this device only', local: 'Demo · this browser' }[liveStatus] || 'Demo';
   return (
     <div className="dash">
       <header className="dash-top">
@@ -106,7 +108,7 @@ export default function DashShell({ active, children, compact }) {
           </div>
           <DemoFlag />
           <div className="grow" />
-          {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {supabaseEnabled() ? 'Live · Supabase Realtime' : 'Live · demo sync'}</span>}
+          {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
           <div style={{ position: 'relative' }}>
             <button className="btn btn-sm" onClick={() => setMenu((m) => !m)} aria-expanded={menu}>Demo ▾</button>
