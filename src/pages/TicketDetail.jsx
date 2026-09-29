@@ -8,6 +8,7 @@ import { fmtTime, fmtDateTime, durationLabel } from '../lib/time.js';
 import DashShell from '../components/DashShell.jsx';
 import IssueMap from '../components/IssueMap.jsx';
 import { PriorityPill, StatusPill, Modal, Icon, readPhoto } from '../components/ui.jsx';
+import { checkSoon } from '../services/guardian.js';
 
 export default function TicketDetail({ id }) {
   const { go, back } = useNav();
@@ -184,7 +185,7 @@ export default function TicketDetail({ id }) {
           </section>
 
           {!resolved && t.status !== 'In Progress' && (
-            <button className="btn btn-block" onClick={() => startWork(t.id)}>Mark In Progress</button>
+            <button className="btn btn-block" onClick={() => { startWork(t.id); checkSoon(t.id); }}>Mark In Progress</button>
           )}
           {!resolved && (
             <div className="row wrap small muted">
@@ -263,9 +264,9 @@ export function ResolveModal({ t, onClose, by }) {
   const suggestion = suggestedResolution(t);
   return (
     <Modal
-      title="Resolve ticket"
+      title={t.department === 'facilities' ? 'Complete job & close ticket' : 'Resolve ticket'}
       onClose={onClose}
-      footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-ok" disabled={!note.trim()} onClick={() => { resolveTicket(t.id, note.trim(), photo, by); onClose(); }}>Resolve</button></>}
+      footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn btn-ok" disabled={!note.trim()} onClick={() => { resolveTicket(t.id, note.trim(), photo, by); checkSoon(t.id); onClose(); }}>{t.department === 'facilities' ? 'Complete & Close' : 'Resolve'}</button></>}
     >
       <div className="field">
         <label htmlFor="res-note">Resolution note (required)</label>
@@ -277,7 +278,7 @@ export function ResolveModal({ t, onClose, by }) {
       {photo ? (
         <div className="photo-thumb"><img src={photo} alt="Repair" /><div className="grow" style={{ fontWeight: 700, color: 'var(--ok)' }}>Repair photo attached ✓</div><button className="btn btn-sm" onClick={() => setPhoto(null)}>Remove</button></div>
       ) : (
-        <button className="btn" onClick={() => fileRef.current?.click()}><Icon name="camera" size={18} /> Attach Repair Photo (optional)</button>
+        <button className="btn" onClick={() => fileRef.current?.click()}><Icon name="camera" size={18} /> {t.department === 'facilities' ? 'Attach Completion Photo (optional)' : 'Attach Repair Photo (optional)'}</button>
       )}
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPhoto(await readPhoto(f)); e.target.value = ''; }} />
     </Modal>

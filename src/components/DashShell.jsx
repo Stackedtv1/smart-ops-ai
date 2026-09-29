@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { onEvent, loadDemoScenario, resetDemo } from '../services/store.js';
 import { deptLabel } from '../lib/config.js';
+import { durationLabel } from '../lib/time.js';
 import { DemoFlag, Modal } from './ui.jsx';
 import { useStore } from '../services/store.js';
 
@@ -40,6 +41,12 @@ export function Toasts() {
           setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 8000);
           return;
         }
+        if (ev.type === 'resolved') {
+          const item = { id: `rs-${ev.ticket.id}`, resolved: ev.ticket };
+          setItems((xs) => [...xs.filter((x) => x.id !== item.id).slice(-2), item]);
+          setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 8000);
+          return;
+        }
         if (ev.type !== 'created') return;
         const t = ev.ticket;
         setItems((xs) => [...xs.slice(-2), t]);
@@ -50,7 +57,18 @@ export function Toasts() {
   if (!items.length) return null;
   return (
     <div className="toasts" aria-live="polite">
-      {items.map((t) => t.guardian ? (
+      {items.map((t) => t.resolved ? (
+        <div key={t.id} className="toast toast-ok" onClick={() => go(`/ticket/${t.resolved.id}`)}>
+          <div className="row between">
+            <span className="eyebrow" style={{ color: 'var(--ok)' }}>✓ Resolved</span>
+            <span className="mono xs muted">{t.resolved.id}</span>
+          </div>
+          <div style={{ fontWeight: 800, marginTop: 2 }}>
+            {t.resolved.ai.category === 'facilities' ? `Stop ${t.resolved.stopId}` : `Bus ${t.resolved.vehicle}`} · {t.resolved.ai.title}
+          </div>
+          <div className="small muted">By {t.resolved.resolution?.by} · {durationLabel((t.resolved.resolution?.at || Date.now()) - t.resolved.createdAt)} from report · “{t.resolved.resolution?.note}”</div>
+        </div>
+      ) : t.guardian ? (
         <div key={t.id} className={`toast ${t.guardian.severity === 'high' ? 'high' : 'medium'} toast-cp`} onClick={() => go('/guardian')}>
           <div className="eyebrow" style={{ color: 'var(--accent)' }}>Guardian · {t.guardian.kind === 'auto-fix' ? 'auto-corrected' : 'escalated'}</div>
           <div style={{ fontWeight: 800, marginTop: 2 }}>{t.guardian.title}</div>

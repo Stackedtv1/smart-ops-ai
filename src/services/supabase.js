@@ -78,6 +78,11 @@ export async function subscribeAll({ onTicket, onTicketDeleted, onMeta }) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'so_tickets' }, (msg) => {
       if (msg.eventType === 'DELETE') onTicketDeleted?.(msg.old?.id);
       else if (msg.new?.payload) onTicket(msg.new.payload);
+      else if (msg.new?.id) {
+        // Realtime drops large column values (e.g. a ticket carrying photos);
+        // read the row directly instead.
+        sb.from('so_tickets').select('payload').eq('id', msg.new.id).single().then(({ data }) => data?.payload && onTicket(data.payload));
+      }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'so_meta' }, (msg) => {
       if (msg.new?.key) onMeta(msg.new.key, msg.new.value, msg.new.version);

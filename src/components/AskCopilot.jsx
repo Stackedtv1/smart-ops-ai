@@ -4,13 +4,13 @@ import { CONFIG } from '../lib/config.js';
 import { answerLocal, snapshotForAI } from '../services/copilot.js';
 
 const SUGGESTED = [
-  'What are our biggest unresolved issues right now?',
-  'Which buses have repeat defects?',
-  'What issues need attention right now?',
-  "What's stalled or overdue?",
+  'What needs attention right now?',
   'Which buses are due for maintenance?',
+  'Tell me about Bus 4721',
+  'What high-priority tickets are open?',
+  'Which buses have repeat defects?',
+  "What's stalled or overdue?",
   'What did Guardian change today?',
-  'Any offline devices or data problems?',
 ];
 
 export default function AskCopilot({ tall = false }) {
@@ -27,8 +27,12 @@ export default function AskCopilot({ tall = false }) {
     setQ('');
     setMsgs((m) => [...m, { role: 'me', text }]);
     setBusy(true);
-    let reply = null;
-    if (CONFIG.aiMode !== 'offline') {
+    // Known operational questions are answered from the live data directly
+    // (instant, exact, linked). Open-ended questions go to the server-side AI,
+    // with the same local engine as the fallback.
+    const local = answerLocal(text);
+    let reply = local.intent !== 'default' ? local : null;
+    if (!reply && CONFIG.aiMode !== 'offline') {
       try {
         const ctl = new AbortController();
         const tm = setTimeout(() => ctl.abort(), 9000);
@@ -43,10 +47,8 @@ export default function AskCopilot({ tall = false }) {
         }
       } catch { /* fall back to local answer */ }
     }
-    if (!reply) {
-      await new Promise((r) => setTimeout(r, 450));
-      reply = answerLocal(text);
-    }
+    if (!reply) reply = local;
+    if (reply === local) await new Promise((r) => setTimeout(r, 450));
     setMsgs((m) => [...m, { role: 'ai', ...reply }]);
     setBusy(false);
   }

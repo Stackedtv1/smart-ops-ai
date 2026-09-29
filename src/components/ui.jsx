@@ -77,7 +77,7 @@ export function Modal({ title, onClose, children, footer }) {
 export const PRIORITY_COLOR = { high: 'var(--high)', medium: 'var(--med)', low: 'var(--low)' };
 
 // Downscale a camera photo so it can travel with the ticket.
-export function readPhoto(file, max = 1024) {
+export function readPhoto(file, max = 800) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onerror = reject;
@@ -91,7 +91,7 @@ export function readPhoto(file, max = 1024) {
         c.height = Math.round(img.height * k);
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
         try {
-          resolve(c.toDataURL('image/jpeg', 0.72));
+          resolve(c.toDataURL('image/jpeg', 0.6));
         } catch {
           resolve(fr.result);
         }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { useStore } from '../services/store.js';
-import { fleetHealth, vehicleHealth, sysLabel, FLEET_RULES } from '../services/fleet.js';
+import { fleetHealth, vehicleHealth, sysLabel, FLEET_RULES, repairHistory } from '../services/fleet.js';
 import { simulateServiceDays } from '../services/guardian.js';
 import { routeLabel } from '../services/maps.js';
 import { garageOf } from '../services/store.js';
@@ -130,6 +130,8 @@ export function VehicleDetail({ bus }) {
   }
   const { rec, status, reasons, tickets, open, repeats } = h;
   const allReasons = ['Critical Review', 'Attention Required', 'Maintenance Due'].flatMap((s) => reasons[s].map((r) => [s, r]));
+  const history = repairHistory(rec, state.tickets);
+  const last = history[0];
 
   return (
     <DashShell active="/fleet">
@@ -165,7 +167,7 @@ export function VehicleDetail({ bus }) {
         <div className="fs-card"><div className="k">Oil / service interval</div><div className="v num">{rec.oilRemainingMi < 0 ? `Over by ${mi(-rec.oilRemainingMi)}` : `${mi(rec.oilRemainingMi)} left`}</div><div className="xs muted">Every {mi(FLEET_RULES.oilIntervalMi)}</div></div>
         <div className="fs-card"><div className="k">Brake inspection</div><div className="v" style={{ color: rec.brakeDueDays <= 7 ? 'var(--med)' : undefined }}>{rec.brakeDueDays < 0 ? `Overdue ${-rec.brakeDueDays} days` : `Due in ${rec.brakeDueDays} days`}</div><div className="xs muted">{fmtDate(rec.brakeDueAt)} · every {FLEET_RULES.brakeInspectionDays} days</div></div>
         <div className="fs-card"><div className="k">Tire inspection</div><div className="v" style={{ color: rec.tireDueDays <= 7 ? 'var(--med)' : undefined }}>{rec.tireDueDays < 0 ? `Overdue ${-rec.tireDueDays} days` : `Due in ${rec.tireDueDays} days`}</div><div className="xs muted">{fmtDate(rec.tireDueAt)} · every {FLEET_RULES.tireInspectionDays} days</div></div>
-        <div className="fs-card"><div className="k">Last completed repair</div><div className="v small" style={{ fontSize: 14 }}>{rec.lastRepair?.desc || '—'}</div><div className="xs muted mono">{rec.lastRepair ? `${rec.lastRepair.wo} · ${fmtDate(rec.lastRepair.at)}` : ''}</div></div>
+        <div className="fs-card"><div className="k">Last completed repair</div><div className="v small" style={{ fontSize: 14 }}>{last?.desc || '—'}</div><div className="xs muted mono">{last ? `${last.ref} · ${fmtDate(last.at)}` : ''}</div></div>
       </div>
 
       <div className="detail-grid">
@@ -192,6 +194,22 @@ export function VehicleDetail({ bus }) {
                 </button>
               )) : <span className="small muted">No open SMART Ops tickets.</span>}
               {tickets.length > open.length && <span className="xs muted">{tickets.length - open.length} closed or merged report(s) on file.</span>}
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-h"><h2>Recent repair history</h2><span className="small muted">Closed in SMART Ops + maintenance system</span></div>
+            <div className="panel-b stack-sm">
+              {history.length ? history.slice(0, 6).map((r) => (
+                <button key={r.key} className="ev" style={{ textAlign: 'left', cursor: r.ticketId ? 'pointer' : 'default' }} onClick={() => r.ticketId && go(`/ticket/${r.ticketId}`)}>
+                  <div className="row between wrap" style={{ gap: 6 }}>
+                    <b>{r.what}</b>
+                    <span className={`tag ${r.ticketId ? 'tag-ok' : ''}`}>{r.source}</span>
+                  </div>
+                  <div className="small">{r.desc}</div>
+                  <div className="xs muted"><span className="mono">{r.ref}</span> · {fmtDate(r.at)}{r.by ? ` · ${r.by}` : ''}</div>
+                </button>
+              )) : <span className="small muted">No completed repairs on file.</span>}
             </div>
           </section>
 

@@ -148,11 +148,14 @@ try {
   channel = new BroadcastChannel('smart-ops-ai');
   channel.onmessage = (e) => {
     if (!e.data?.state || e.data.from === TAB) return;
-    const known = new Set(state.tickets.map((t) => t.id));
+    const before = new Map(state.tickets.map((t) => [t.id, t.status]));
     const incoming = e.data.state;
     state = incoming;
     notify();
-    incoming.tickets.filter((t) => !known.has(t.id)).forEach((t) => emit({ type: 'created', ticket: t }));
+    incoming.tickets.forEach((t) => {
+      if (!before.has(t.id)) emit({ type: 'created', ticket: t });
+      else if (before.get(t.id) !== 'Resolved' && t.status === 'Resolved') emit({ type: 'resolved', ticket: t });
+    });
   };
 } catch {
   /* BroadcastChannel unsupported */
@@ -311,10 +314,11 @@ if (LIVE && IS_BROWSER) {
     if (!ok) return;
     remote.subscribeAll({
       onTicket: (t) => {
-        const exists = state.tickets.some((x) => x.id === t.id);
-        const tickets = exists ? state.tickets.map((x) => (x.id === t.id ? t : x)) : [...state.tickets, t];
+        const prev = state.tickets.find((x) => x.id === t.id);
+        const tickets = prev ? state.tickets.map((x) => (x.id === t.id ? t : x)) : [...state.tickets, t];
         commit({ ...state, tickets, seq: Math.max(state.seq, maxSeqToday([t])) }, { fromRemote: true });
-        if (!exists) emit({ type: 'created', ticket: t });
+        if (!prev) emit({ type: 'created', ticket: t });
+        else if (prev.status !== 'Resolved' && t.status === 'Resolved') emit({ type: 'resolved', ticket: t });
       },
       onTicketDeleted: (id) => {
         if (!id) return;
@@ -350,7 +354,7 @@ export const waitForSync = (id) => syncs.get(id) || Promise.resolve();
 
 function pushRemote(t) {
   if (!LIVE || !IS_BROWSER) return;
-  remote.upsertTickets([t]);
+  syncs.set(t.id, remote.upsertTickets([t]));
 }
 
 // ---------------------------------------------------------------------------
@@ -433,11 +437,13 @@ export function startWork(id, by) {
 export function resolveTicket(id, note, photo, by) {
   const t = getTicket(id);
   const who = by || t?.assignee || 'Dispatch';
-  return mutate(
+  const done = mutate(
     id,
     (x) => ({ ...x, status: 'Resolved', resolution: { note, photo: photo || null, at: Date.now(), by: who } }),
     [{ label: 'Resolved', by: who }]
   );
+  if (done) emit({ type: 'resolved', ticket: done });
+  return done;
 }
 
 export async function resetDemo() {

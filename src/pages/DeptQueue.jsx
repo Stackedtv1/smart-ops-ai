@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { recommendedAction } from '../services/ai.js';
-import { useStore, startWork, isOpen } from '../services/store.js';
+import { useStore, startWork, isOpen, assignTicket, addNote } from '../services/store.js';
 import { DEPARTMENTS, deptLabel } from '../lib/config.js';
 import { routeLabel, stopById } from '../services/maps.js';
 import { fmtTime, ago, startOfDay, durationLabel } from '../lib/time.js';
@@ -9,18 +9,19 @@ import DashShell from '../components/DashShell.jsx';
 import { PriorityPill, StatusPill, RouteBadge, PRIORITY_COLOR } from '../components/ui.jsx';
 import { sortQueue, useNow } from '../components/TicketTable.jsx';
 import { ResolveModal } from './TicketDetail.jsx';
+import { checkSoon } from '../services/guardian.js';
 
 const CONFIG = {
   maintenance: {
-    title: 'MAINTENANCE QUEUE', deps: ['maintenance'], tech: 'Tech D. Alvarez', accept: 'Accept Job',
+    title: 'MAINTENANCE QUEUE', deps: ['maintenance'], tech: 'Tech D. Alvarez', accept: 'Accept Job', complete: 'Complete Repair & Close', steps: ['New', 'Accepted · In Progress', 'Repaired · Resolved'], notePh: 'e.g. Parts ordered, bus moved to bay 3.',
     scope: ['Doors', 'Brakes', 'Tires', 'Warning lights', 'Wheelchair equipment', 'Mirrors', 'HVAC', 'Lighting'],
   },
   facilities: {
-    title: 'FACILITIES QUEUE', deps: ['facilities'], tech: 'Shelter Crew 1', accept: 'Accept Job',
+    title: 'FACILITIES QUEUE', deps: ['facilities'], tech: 'Shelter Crew 1', accept: 'Accept Job', complete: 'Complete Job & Close', steps: ['New', 'Crew en route · In Progress', 'Completed · Closed'], notePh: 'e.g. Glass vendor scheduled for Thursday.',
     scope: ['Shelters', 'Trash', 'Signs', 'Graffiti', 'Broken glass', 'Lighting', 'Stop damage'],
   },
   safety: {
-    title: 'SAFETY / SUPERVISOR QUEUE', deps: ['supervisor', 'safety'], tech: 'Road Supervisor 12', accept: 'Acknowledge & Respond',
+    title: 'SAFETY / SUPERVISOR QUEUE', deps: ['supervisor', 'safety'], tech: 'Road Supervisor 12', accept: 'Acknowledge & Respond', complete: 'Close Incident', steps: ['New', 'Responding', 'Closed'], notePh: 'e.g. Supervisor on scene at 2:14 PM.',
     scope: ['Passenger conduct', 'Medical', 'Slip hazards', 'Stop security', 'Fire / smoke'],
   },
 };
@@ -35,6 +36,8 @@ export default function DeptQueue({ dept }) {
   const doneToday = sortQueue(mine.filter((t) => t.status === 'Resolved' && t.resolution?.at >= startOfDay(now)));
   const [selId, setSelId] = useState(null);
   const [resolving, setResolving] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const crews = DEPARTMENTS[c.deps[0]]?.crews || [];
   const sel = mine.find((t) => t.id === selId) || open[0] || null;
   const count = (p) => open.filter((t) => t.priority === p).length;
 
@@ -103,19 +106,46 @@ export default function DeptQueue({ dept }) {
                 <div className="stack-sm">
                   <span className="eyebrow">Workflow</span>
                   <div className="row wrap" style={{ gap: 8 }}>
-                    {['Assigned / New', 'In Progress', 'Resolved'].map((s, i) => {
+                    {c.steps.map((st, i) => {
                       const idx = sel.status === 'Resolved' ? 2 : sel.status === 'In Progress' ? 1 : 0;
-                      return <span key={s} className="tag" style={i <= idx ? { background: 'var(--accent)', color: 'var(--accent-ink)' } : {}}>{i + 1}. {s}</span>;
+                      return <span key={st} className="tag" style={i <= idx ? { background: i === 2 ? 'var(--ok)' : 'var(--accent)', color: 'var(--accent-ink)' } : {}}>{i + 1}. {st}</span>;
                     })}
                   </div>
                 </div>
 
+                {sel.status !== 'Resolved' && (
+                  <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
+                    <label className="small" htmlFor="crew" style={{ fontWeight: 700 }}>Assigned crew</label>
+                    <select id="crew" className="select" style={{ width: 'auto', minWidth: 180 }} value={sel.assignee || ''} onChange={(e) => e.target.value && assignTicket(sel.id, e.target.value, `${deptLabel(c.deps[0])} lead`)}>
+                      <option value="">Unassigned</option>
+                      {crews.map((cr) => <option key={cr}>{cr}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 {sel.status === 'New' || sel.status === 'Assigned' ? (
-                  <button className="btn btn-primary btn-lg" onClick={() => startWork(sel.id, sel.assignee || c.tech)}>{c.accept}</button>
+                  <button className="btn btn-primary btn-lg" onClick={() => { startWork(sel.id, sel.assignee || c.tech); checkSoon(sel.id); }}>{c.accept}</button>
                 ) : sel.status === 'In Progress' ? (
-                  <button className="btn btn-ok btn-lg" onClick={() => setResolving(true)}>Resolve</button>
+                  <button className="btn btn-ok btn-lg" onClick={() => setResolving(true)}>{c.complete}</button>
                 ) : (
-                  <div className="notice notice-info">Resolved: {sel.resolution?.note}</div>
+                  <div className="notice notice-ok stack-sm" style={{ gap: 6 }}>
+                    <b>✓ {sel.department === 'facilities' ? 'Completed and closed' : 'Resolved'} by {sel.resolution?.by} at {fmtTime(sel.resolution?.at)} · {durationLabel((sel.resolution?.at || 0) - sel.createdAt)} from report</b>
+                    <span>{sel.resolution?.note}</span>
+                    {sel.resolution?.photo && <div className="ev-photo" style={{ maxWidth: 260 }}><img src={sel.resolution.photo} alt="Completion photo" /></div>}
+                    <span className="small muted">Supervisors see this on the Command dashboard; the operator sees it in My Reports.</span>
+                  </div>
+                )}
+
+                {sel.status !== 'Resolved' && (
+                  <div className="row" style={{ gap: 8 }}>
+                    <input className="input grow" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={c.notePh} aria-label="Add a note" onKeyDown={(e) => { if (e.key === 'Enter' && noteText.trim()) { addNote(sel.id, noteText.trim(), sel.assignee || c.tech); setNoteText(''); } }} />
+                    <button className="btn" disabled={!noteText.trim()} onClick={() => { addNote(sel.id, noteText.trim(), sel.assignee || c.tech); setNoteText(''); }}>Add note</button>
+                  </div>
+                )}
+                {sel.notes?.length > 0 && (
+                  <div className="stack-sm">
+                    {sel.notes.slice(-3).map((n, i) => <div key={i} className="ev"><div className="small">{n.text}</div><div className="xs muted">{n.by} · {fmtTime(n.at)}</div></div>)}
+                  </div>
                 )}
                 <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => go(`/ticket/${sel.id}`)}>Open full ticket →</button>
               </div>

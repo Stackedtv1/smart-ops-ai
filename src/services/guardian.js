@@ -25,7 +25,7 @@ import { vehicleRecord, openPmOrder, openOrderFor, sysLabel, FLEET_BUSES, FLEET_
 import { setFleet, isLive, flushMeta, waitForSync } from './store.js';
 import { triggerSweep } from './supabase.js';
 import { STOPS } from './maps.js';
-import { MIN, fmtTime, fmtDate } from '../lib/time.js';
+import { MIN, fmtTime, fmtDate, fmtDateTime } from '../lib/time.js';
 
 export const GUARDIAN = 'SMART Ops AI Guardian';
 export const SWEEP_MS = 15000;
@@ -180,7 +180,7 @@ function ruleDuplicates(now) {
       key, rule: 'duplicate-repeat', kind: 'escalation', severity: 'high', now,
       ticketIds: [primary.id, ...dups.map((d) => d.id)],
       title: `Bus ${primary.vehicle}: ${comp} reported ${all.length} times in ${THRESHOLDS.duplicateWindowHrs} hours`,
-      detect: `Bus ${primary.vehicle} has submitted the same ${comp} report ${all.length} times in ${THRESHOLDS.duplicateWindowHrs} hours (${all.map((t) => fmtTime(t.createdAt)).join(', ')}).`,
+      detect: `Bus ${primary.vehicle} has submitted the same ${comp} report ${all.length} times in ${THRESHOLDS.duplicateWindowHrs} hours (${[...all].sort((a, b) => a.createdAt - b.createdAt).map((t) => fmtDateTime(t.createdAt)).join(', ')}).`,
       diagnose: `${repeat ? 'Repeat high-priority maintenance issue' : 'Duplicate report of an open issue'}${priorFix ? `. The earlier fix ("${(priorFix.resolution?.note || '').replace(/\.$/, '')}") did not hold` : ''}. ${dups.length} open duplicate${dups.length > 1 ? 's' : ''} would split the work.${woText}`,
       correct: `Merged ${dups.length} duplicate${dups.length > 1 ? 's' : ''} into ${primary.id}${raise ? ', raised priority to HIGH' : ''}, kept routing to Maintenance, alerted ${chain[0]}.`,
       changes: [...dups.map((d) => `${d.id}: status → Merged`), ...(raise ? [`${primary.id}: priority ${primary.priority.toUpperCase()} → HIGH`] : []), `${primary.id}: linked ${dups.length} report(s)`],
@@ -512,6 +512,14 @@ export function simulateServiceDays(days = 3) {
 }
 
 // Run a check: on the server in live mode, in this browser otherwise.
+// Ask Guardian to look again shortly after a person acts on a ticket, so a
+// follow-up closes (or a card updates) within seconds instead of at the next sweep.
+export function checkSoon(ticketId) {
+  if (isLive()) return waitForSync(ticketId).then(() => triggerSweep());
+  setTimeout(sweep, 800);
+  return Promise.resolve();
+}
+
 export async function runCheck() {
   if (isLive()) {
     await flushMeta();

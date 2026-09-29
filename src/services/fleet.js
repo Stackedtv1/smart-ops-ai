@@ -51,7 +51,19 @@ export function vehicleRecord(bus, state, now = Date.now()) {
     workOrders,
     openWorkOrders: workOrders.filter((w) => w.status !== 'Closed'),
     lastRepair: base.lastRepair ? { ...base.lastRepair, at: ago(base.lastRepair.daysAgo) } : null,
+    history: (base.history || []).map((h) => ({ ...h, at: ago(h.daysAgo) })),
   };
+}
+
+// Completed repairs for a bus: SMART Ops tickets closed in the app plus the
+// maintenance system's closed work orders, newest first.
+export function repairHistory(rec, tickets) {
+  const fromApp = tickets
+    .filter((t) => t.vehicle === rec.bus && t.ai.category === 'vehicle_defect' && t.status === 'Resolved' && t.resolution)
+    .map((t) => ({ key: t.id, at: t.resolution.at, desc: t.resolution.note, what: t.ai.title, by: t.resolution.by, ref: t.id, source: 'SMART Ops ticket', ticketId: t.id }));
+  const fromMs = (rec.history || []).map((h) => ({ key: h.wo, at: h.at, desc: h.desc, what: sysLabel(h.system), by: h.tech, ref: h.wo, source: 'Maintenance system' }));
+  if (!fromMs.length && rec.lastRepair) fromMs.push({ key: rec.lastRepair.wo, at: rec.lastRepair.at, desc: rec.lastRepair.desc, what: 'Repair', by: '', ref: rec.lastRepair.wo, source: 'Maintenance system' });
+  return [...fromApp, ...fromMs].sort((a, b) => b.at - a.at);
 }
 
 export function openPmOrder(rec) {

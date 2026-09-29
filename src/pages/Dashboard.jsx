@@ -73,7 +73,7 @@ export default function Dashboard({ compact }) {
         <StatCard n={stats.other} label="Other" stripe="var(--line-strong)" />
       </div>
       <div className="kpi-row">
-        <div className="kpi"><span className="n">{stats.resolvedToday}</span><span className="l">Resolved Today</span></div>
+        <button className="kpi kpi-btn" onClick={() => { setFilter('resolved'); document.getElementById('ticket-queue')?.scrollIntoView({ behavior: 'smooth' }); }} title="Show tickets resolved today"><span className="n">{stats.resolvedToday}</span><span className="l">Resolved Today →</span></button>
         <div className="kpi"><span className="n">{stats.avgResolutionMin} min</span><span className="l">Average Resolution</span></div>
         <div className="kpi"><span className="n">{stats.repeatLocations}</span><span className="l">Repeat Problem Locations</span></div>
         <div className="kpi"><span className="n">{stats.assignedPct}%</span><span className="l">Assigned</span></div>
@@ -103,7 +103,7 @@ export default function Dashboard({ compact }) {
         </div>
       </div>
 
-      <section className="panel">
+      <section className="panel" id="ticket-queue">
         <div className="panel-h" style={{ flexWrap: 'wrap' }}>
           <h2>Ticket Queue</h2>
           <div className="filters">

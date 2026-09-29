@@ -5,7 +5,8 @@ import { deptLabel } from '../lib/config.js';
 import { GTFS_META } from './maps.js';
 import { MIN, fmtTime } from '../lib/time.js';
 import { DEVICES, THRESHOLDS } from './guardian.js';
-import { fleetHealth, vehicleHealth } from './fleet.js';
+import { fleetHealth, vehicleHealth, repairHistory } from './fleet.js';
+import { fmtDate } from '../lib/time.js';
 
 const unit = (t) => (t.ai.category === 'facilities' ? `Stop ${t.stopId}` : t.vehicle ? `Bus ${t.vehicle}` : 'Unknown bus');
 const ageMin = (t, now) => (now - t.createdAt) / MIN;
@@ -21,22 +22,58 @@ export function answerLocal(q) {
   const text = q.toLowerCase();
   const item = (t) => ({ ticketId: t.id, label: `${t.priority.toUpperCase()} · ${unit(t)} · ${t.ai.title} · ${t.status}${t.assignee ? ` (${t.assignee})` : ''} · ${Math.round(ageMin(t, now))} min old` });
 
-  if (/\bpm\b|preventive|maintenance due|due for|fleet health|vin|mileage|overdue (pm|maintenance)|critical review|fault code|dtc/.test(text)) {
-    const fh = fleetHealth(s, now).filter((h) => h.status !== 'Normal');
-    if (!fh.length) return { text: 'Every demo bus is Normal: no PM due, no active faults, no repeat defects.' };
-    return {
-      text: `${fh.length} bus${fh.length === 1 ? ' needs' : 'es need'} maintenance attention (from maintenance records + operator reports):`,
-      items: fh.map((h) => ({ bus: h.rec.bus, label: `Bus ${h.rec.bus} · ${h.status} · ${h.reasons[h.status][0]}` })),
-    };
-  }
   const bus = text.match(/\b(\d{4})\b/)?.[1];
   if (bus && /bus|vehicle|\d{4}/.test(text)) {
     const list = s.tickets.filter((t) => t.vehicle === bus).sort((a, b) => b.createdAt - a.createdAt);
-    if (!list.length && !vehicleHealth(bus, s, now)) return { text: `No reports or fleet record for bus ${bus}.` };
-    const o = list.filter(isOpen);
     const vh = vehicleHealth(bus, s, now);
-    const fleetLine = vh ? ` Guardian status: ${vh.status}. Next PM ${vh.rec.pmRemainingMi < 0 ? `overdue by ${Math.abs(vh.rec.pmRemainingMi).toLocaleString()} mi` : `in ${vh.rec.pmRemainingMi.toLocaleString()} mi`}${vh.rec.openWorkOrders.length ? `; open work orders ${vh.rec.openWorkOrders.map((w) => w.id).join(', ')}` : ''}.` : '';
-    return { text: `Bus ${bus}: ${list.length} report${list.length === 1 ? '' : 's'} on file, ${o.length} open.${fleetLine}`, items: [...(vh ? [{ bus, label: `Open bus ${bus} fleet record` }] : []), ...list.slice(0, 6).map(item)] };
+    if (!list.length && !vh) return { intent: 'bus', text: `No reports or fleet record for bus ${bus}.` };
+    const o = list.filter(isOpen);
+    const lines = [];
+    if (vh) {
+      const r = vh.rec;
+      const why = vh.reasons[vh.status]?.[0];
+      lines.push(`Bus ${bus} (VIN ${r.vin}) is in ${vh.status}${why ? `: ${why}` : ''}.`);
+      lines.push(`Mileage ${r.mileage.toLocaleString()} mi. Next PM ${r.pmRemainingMi < 0 ? `overdue by ${Math.abs(r.pmRemainingMi).toLocaleString()} mi` : `in ${r.pmRemainingMi.toLocaleString()} mi`}.${r.faults.length ? ` Active fault ${r.faults.map((f) => `${f.code} (${f.desc})`).join(', ')}.` : ''}`);
+      lines.push(r.openWorkOrders.length ? `Open work order${r.openWorkOrders.length > 1 ? 's' : ''}: ${r.openWorkOrders.map((w) => `${w.id} — ${w.desc} (${w.status.toLowerCase()})`).join('; ')}.` : 'No open work orders.');
+      if (vh.repeats.length) lines.push(`Repeat problem: ${vh.repeats.map((a) => `${a.component.toLowerCase()} ${a.detail}`).join('; ')}.`);
+      const last = repairHistory(r, s.tickets)[0];
+      if (last) lines.push(`Last repair: ${last.desc.replace(/\.$/, '')} (${last.ref}, ${fmtDate(last.at)}).`);
+    }
+    lines.push(`${o.length} open defect${o.length === 1 ? '' : 's'} in SMART Ops, ${list.length} report${list.length === 1 ? '' : 's'} on file. Maintenance makes the return-to-service call.`);
+    return { intent: 'bus', text: lines.join('\n'), items: [...(vh ? [{ bus, label: `Open bus ${bus} fleet record` }] : []), ...o.slice(0, 5).map(item)] };
+  }
+  if (/high[- ]?priority|\bhigh\b|urgent|critical tickets/.test(text)) {
+    const list = open.filter((t) => t.priority === 'high').sort((a, b) => (a.ai.category === 'safety' ? -1 : 0) - (b.ai.category === 'safety' ? -1 : 0) || a.createdAt - b.createdAt);
+    const unowned = list.filter((t) => !t.assignee).length;
+    return { intent: 'high', text: list.length ? `${list.length} high-priority ticket${list.length > 1 ? 's are' : ' is'} open${unowned ? `, ${unowned} without an owner` : ', all assigned'}:` : 'No high-priority tickets are open right now.', items: list.slice(0, 8).map(item) };
+  }
+  if (/attention|right now|what should|focus|biggest|most important|priorit/.test(text)) {
+    const esc = s.guardian.followups.filter((f) => !f.closed).map((f) => s.tickets.find((t) => t.id === f.ticketId)).filter(Boolean);
+    const hi = open.filter((t) => t.priority === 'high' && !esc.some((e) => e.id === t.id));
+    const crit = fleetHealth(s, now).filter((h) => h.status === 'Critical Review');
+    const parts = [
+      `${open.length} open issues, ${open.filter((t) => t.priority === 'high').length} high priority.`,
+      esc.length ? `${esc.length} Guardian escalation${esc.length > 1 ? 's are' : ' is'} waiting for a person to accept.` : 'No escalations waiting.',
+      crit.length ? `Critical Review: bus ${crit.map((h) => h.rec.bus).join(', ')}.` : '',
+    ].filter(Boolean);
+    return {
+      intent: 'attention',
+      text: `${parts.join(' ')} Start here:`,
+      items: [
+        ...esc.slice(0, 3).map((t) => ({ ticketId: t.id, label: `Escalated · ${unit(t)} · ${t.ai.title} · waiting on ${t.assignee || 'an owner'}` })),
+        ...crit.slice(0, 2).map((h) => ({ bus: h.rec.bus, label: `Bus ${h.rec.bus} · Critical Review · ${h.reasons['Critical Review'][0]}` })),
+        ...hi.slice(0, 4).map(item),
+      ].slice(0, 8),
+    };
+  }
+  if (/\bpm\b|preventive|maintenance due|due for|fleet health|vin|mileage|overdue (pm|maintenance)|critical review|fault code|dtc/.test(text)) {
+    const fh = fleetHealth(s, now).filter((h) => h.status !== 'Normal');
+    if (!fh.length) return { intent: 'fleet', text: 'Every demo bus is Normal: no PM due, no active faults, no repeat defects.' };
+    return {
+      intent: 'fleet',
+      text: `${fh.length} bus${fh.length === 1 ? ' needs' : 'es need'} maintenance attention (from maintenance records + operator reports):`,
+      items: fh.map((h) => ({ bus: h.rec.bus, label: `Bus ${h.rec.bus} · ${h.status} · ${h.reasons[h.status][0]}` })),
+    };
   }
   const route = text.match(/route\s*(\d{3})/)?.[1];
   if (route) {
@@ -79,7 +116,7 @@ export function answerLocal(q) {
   // default: biggest unresolved issues
   const list = [...open].sort((a, b) => PRI[a.priority] - PRI[b.priority] || (a.ai.category === 'safety' ? -1 : 0) - (b.ai.category === 'safety' ? -1 : 0) || a.createdAt - b.createdAt).slice(0, 6);
   const hi = open.filter((t) => t.priority === 'high').length;
-  return { text: `${open.length} open issues, ${hi} high priority. The biggest right now:`, items: list.map(item) };
+  return { intent: 'default', text: `${open.length} open issues, ${hi} high priority. The biggest right now:`, items: list.map(item) };
 }
 
 export function snapshotForAI() {
@@ -90,6 +127,8 @@ export function snapshotForAI() {
     open: s.tickets.filter(isOpen).map((t) => ({ id: t.id, unit: unit(t), route: t.route, category: t.ai.category, title: t.ai.title, priority: t.priority, status: t.status, dept: t.department, assignee: t.assignee, age_min: Math.round(ageMin(t, now)) })),
     repeat: patternAlerts(s.tickets, now).map((a) => ({ title: a.title, detail: a.detail, dates: a.dates })),
     recent_actions: s.guardian.audit.slice(0, 10).map((e) => ({ at: new Date(e.at).toISOString(), title: e.title, why: e.why })),
+    fleet: fleetHealth(s, now).map((h) => ({ bus: h.rec.bus, vin: h.rec.vin, status: h.status, reasons: [...h.reasons['Critical Review'], ...h.reasons['Attention Required'], ...h.reasons['Maintenance Due']].slice(0, 4), mileage: h.rec.mileage, pm_remaining_mi: h.rec.pmRemainingMi, open_work_orders: h.rec.openWorkOrders.map((w) => `${w.id}: ${w.desc}`), faults: h.rec.faults.map((f) => f.code) })),
+    escalations_waiting: s.guardian.followups.filter((f) => !f.closed).map((f) => f.ticketId),
     devices_offline: DEVICES.filter((d) => (now - d.seen) / MIN >= THRESHOLDS.deviceOfflineMin).map((d) => d.bus),
   };
 }

@@ -32,8 +32,10 @@ function Stage({ n, label, text, on }) {
   );
 }
 
-function IncidentCard({ i }) {
+function IncidentCard({ i, fu, bus, now }) {
   const { go } = useNav();
+  const left = fu ? Math.max(0, fu.dueAt - now) : 0;
+  const nextUp = fu?.chain?.[Math.min((fu.level || 0) + 1, fu.chain.length - 1)];
   const k = KIND[i.kind] || KIND.flag;
   const done = /Acknowledged|Auto-corrected|Undone/.test(i.state);
   return (
@@ -50,10 +52,13 @@ function IncidentCard({ i }) {
         <Stage n="4" label="Follow up" text={i.stages.followUp} on={i.stages.followUp !== 'No follow-up needed.'} />
       </ol>
       <div className="row between wrap" style={{ gap: 8, marginTop: 8 }}>
-        <span className={`cp-state ${done ? 'ok' : ''}`}>{i.state}</span>
+        <span className="stack-sm" style={{ gap: 2 }}>
+          <span className={`cp-state ${done ? 'ok' : ''}`}>{i.state}</span>
+          {fu && nextUp && <span className="xs mono" style={{ color: 'var(--high)', fontWeight: 700 }}>{left > 0 ? `Escalates to ${nextUp} in ${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')} unless someone accepts the job` : `Escalation check due now → ${nextUp}`}</span>}
+        </span>
         <span className="row wrap" style={{ gap: 6 }}>
           {i.humanRequired && <span className="tag">Human confirmation required</span>}
-          {i.vehicle && <button className="btn btn-sm" onClick={() => go(`/fleet/${i.vehicle}`)}>Bus {i.vehicle} fleet record</button>}
+          {(i.vehicle || bus) && <button className="btn btn-sm" onClick={() => go(`/fleet/${i.vehicle || bus}`)}>Bus {i.vehicle || bus} fleet record</button>}
           {i.ticketIds?.[0] && <button className="btn btn-sm" onClick={() => go(`/ticket/${i.ticketIds[0]}`)}>Open {i.ticketIds[0]}</button>}
         </span>
       </div>
@@ -64,6 +69,8 @@ function IncidentCard({ i }) {
 export default function Guardian() {
   const { go } = useNav();
   const c = useStore((s) => s.guardian);
+  const tickets = useStore((s) => s.tickets);
+  const busOf = (i) => (i.ticketIds || []).map((id) => tickets.find((t) => t.id === id)).find((t) => t?.vehicle && t.ai?.category === 'vehicle_defect')?.vehicle;
   const now = useNow(1000);
   const [filter, setFilter] = useState('all');
   const [ran, setRan] = useState(false);
@@ -87,7 +94,7 @@ export default function Guardian() {
         <div className="row wrap" style={{ gap: 8 }}>
           <button className="btn" onClick={() => runCheck()}>Run check now</button>
           <button className="btn btn-primary" disabled={ran} onClick={() => { runBrakeScenario(); setRan(true); }}>
-            {ran ? 'Scenario running…' : 'Live scenario: Bus 4721 brake warning'}
+            {ran ? 'Scenario started — see the top card' : 'Live scenario: Bus 4721 brake warning'}
           </button>
         </div>
       </div>
@@ -113,7 +120,7 @@ export default function Guardian() {
             </div>
           </div>
           <div className="panel-b stack" style={{ gap: 12 }}>
-            {incidents.length ? incidents.map((i) => <IncidentCard key={i.id} i={i} />) : <div className="muted">Nothing detected yet. The first check runs a moment after the app opens.</div>}
+            {incidents.length ? incidents.map((i) => <IncidentCard key={i.id} i={i} now={now} fu={c.followups.find((f) => f.incidentId === i.id && !f.closed)} bus={busOf(i)} />) : <div className="muted">Nothing detected yet. The first check runs a moment after the app opens.</div>}
           </div>
         </section>
 
