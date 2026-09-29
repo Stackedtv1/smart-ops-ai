@@ -23,6 +23,12 @@ export const FIELDS = [
   { group: 'Downtime', key: 'downtimeSavedHrs', label: 'Downtime saved per held bus (faster routing)', unit: 'hrs', min: 0, max: 8, step: 0.25 },
   { group: 'Downtime', key: 'busHourCost', label: 'Cost of a bus-hour out of service', unit: '$/hr', min: 20, max: 250, step: 5 },
 
+  { group: 'Guardian & fleet health', key: 'supervisors', label: 'Supervisors / dispatchers who chase and triage issues', unit: 'people', min: 0, max: 60, step: 1 },
+  { group: 'Guardian & fleet health', key: 'supHrsWeek', label: 'Hours each saves per week (triage, follow-ups, status checks Guardian now does)', unit: 'hrs/wk', min: 0, max: 10, step: 0.5 },
+  { group: 'Guardian & fleet health', key: 'supRate', label: 'Supervisor loaded labor cost', unit: '$/hr', min: 30, max: 150, step: 1 },
+  { group: 'Guardian & fleet health', key: 'majorRepairsAvoided', label: 'Major repairs avoided per year (repeat defects / overdue PMs caught before they grow)', unit: 'repairs', min: 0, max: 50, step: 1 },
+  { group: 'Guardian & fleet health', key: 'majorRepairCost', label: 'Extra cost when a small defect becomes a major repair', unit: '$', min: 500, max: 25000, step: 500 },
+
   { group: 'System cost', key: 'annualCost', label: 'Annual SMART Ops AI license (subscription + support)', unit: '$', min: 0, max: 500000, step: 1000 },
   { group: 'System cost', key: 'implCost', label: 'One-time implementation & integration (year 1 only)', unit: '$', min: 0, max: 200000, step: 1000 },
 ];
@@ -32,13 +38,13 @@ export const PRESETS = {
     label: 'Conservative',
     reportsPerDay: 20, daysPerYear: 360, paperMin: 8, digitalMin: 3, laborRate: 45,
     paperDelayHrs: 4, digitalDelayMin: 5, roadCallsPerMonth: 30, preventablePct: 5, roadCallCost: 800,
-    vehicleSharePct: 43, holdsBusPct: 10, downtimeSavedHrs: 0.5, busHourCost: 60, annualCost: 90000, implCost: 30000,
+    vehicleSharePct: 43, holdsBusPct: 10, downtimeSavedHrs: 0.5, busHourCost: 60, supervisors: 8, supHrsWeek: 2, supRate: 60, majorRepairsAvoided: 3, majorRepairCost: 4000, annualCost: 90000, implCost: 30000,
   },
   expected: {
     label: 'Expected',
     reportsPerDay: 30, daysPerYear: 360, paperMin: 14, digitalMin: 3, laborRate: 52,
     paperDelayHrs: 6, digitalDelayMin: 3, roadCallsPerMonth: 40, preventablePct: 10, roadCallCost: 1200,
-    vehicleSharePct: 43, holdsBusPct: 15, downtimeSavedHrs: 1, busHourCost: 85, annualCost: 90000, implCost: 30000,
+    vehicleSharePct: 43, holdsBusPct: 15, downtimeSavedHrs: 1, busHourCost: 85, supervisors: 10, supHrsWeek: 3, supRate: 65, majorRepairsAvoided: 5, majorRepairCost: 5000, annualCost: 90000, implCost: 30000,
   },
 };
 
@@ -56,7 +62,14 @@ export function computeRoi(v) {
 
   const delayHoursRemoved = reportsYr * Math.max(0, v.paperDelayHrs - v.digitalDelayMin / 60);
 
-  const total = paperwork + missedDefects + downtime;
+  // Guardian: supervisor time no longer spent chasing, merging and following up
+  // (separate from operators' paperwork time), plus defects stopped before
+  // they turn into bigger repairs (separate from in-service road calls).
+  const supHours = (v.supervisors || 0) * (v.supHrsWeek || 0) * 52;
+  const oversight = supHours * (v.supRate || 0);
+  const fleetSaved = (v.majorRepairsAvoided || 0) * (v.majorRepairCost || 0);
+
+  const total = paperwork + missedDefects + downtime + oversight + fleetSaved;
   // Year 1 carries the one-time implementation fee; later years pay the license only.
   const impl = v.implCost || 0;
   const year1Cost = v.annualCost + impl;
@@ -70,20 +83,22 @@ export function computeRoi(v) {
     reportsYr, hoursReturned, fte: hoursReturned / 2080, paperwork,
     roadCallsAvoided, missedDefects, heldBuses, busHoursSaved, downtime,
     delayHoursRemoved, speedup: (v.paperDelayHrs * 60) / Math.max(1, v.digitalDelayMin),
-    total, impl, year1Cost, net, roiPct, ongoingNet, ongoingRoiPct, paybackMonths,
+    supHours, oversight, fleetSaved, total, impl, year1Cost, net, roiPct, ongoingNet, ongoingRoiPct, paybackMonths,
     lines: [
       { key: 'paperwork', label: 'Reduced paperwork', value: paperwork, note: `${fmtNum(hoursReturned)} staff hours returned (${(hoursReturned / 2080).toFixed(1)} FTE)` },
       { key: 'missed', label: 'Fewer missed defects', value: missedDefects, note: `${fmtNum(roadCallsAvoided)} road calls avoided per year` },
       { key: 'downtime', label: 'Less bus downtime', value: downtime, note: `${fmtNum(busHoursSaved)} bus-hours back in service` },
+      { key: 'oversight', label: 'Less supervisor chasing (Guardian)', value: oversight, note: `${fmtNum(supHours)} supervisor hours returned` },
+      { key: 'fleet', label: 'Defects caught before major repair', value: fleetSaved, note: `${fmtNum(v.majorRepairsAvoided || 0)} major repairs avoided (repeat defects, overdue PMs)` },
     ],
   };
 }
 
-export const fmtMoney = (n) => (Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`);
+export const fmtMoney = (n) => { const a = Math.abs(n); const s = a >= 1e6 ? `$${(a / 1e6).toFixed(2)}M` : `$${Math.round(a).toLocaleString()}`; return n < 0 && Math.round(a) > 0 ? `−${s}` : s; };
 export const fmtNum = (n) => Math.round(n).toLocaleString();
 
 // --- shared, remembered inputs (summary + calculator read the same values) ---
-const KEY = 'smart-ops-ai.roi.v2'; // v2: $90k license + implementation fee
+const KEY = 'smart-ops-ai.roi.v3'; // v3: Guardian & fleet health value lines
 const listeners = new Set();
 let state = (() => {
   try {

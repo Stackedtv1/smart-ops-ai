@@ -2,7 +2,7 @@ import { useNav } from '../lib/router.jsx';
 import DashShell from '../components/DashShell.jsx';
 import { useRoi, computeRoi, applyPreset, setValue, FIELDS, PRESETS, fmtMoney, fmtNum } from '../services/roi.js';
 
-const LINE_COLORS = { paperwork: '#0b5cad', missed: '#0f7a6d', downtime: '#c75f00' };
+const LINE_COLORS = { paperwork: '#0b5cad', missed: '#0f7a6d', downtime: '#c75f00', oversight: '#6b3fa0', fleet: '#8a6d00' };
 
 function PresetSwitch({ preset }) {
   return (
@@ -60,7 +60,7 @@ export default function ROI() {
       <div className="row between wrap">
         <div>
           <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.02em' }}>Return on Investment</h1>
-          <div className="small muted">What faster, digital operator reporting could be worth each year · illustrative estimate</div>
+          <div className="small muted">What digital reporting plus Guardian monitoring could be worth each year · illustrative estimate</div>
         </div>
         <PresetSwitch preset={preset} />
       </div>
@@ -81,6 +81,8 @@ export default function ROI() {
               <li><span>Routing speed, paper vs. digital</span><b className="num">{Math.round(r.speedup)}× faster</b></li>
               <li><span>Road calls avoided</span><b className="num">{fmtNum(r.roadCallsAvoided)}</b></li>
               <li><span>Bus-hours back in service</span><b className="num">{fmtNum(r.busHoursSaved)}</b></li>
+              <li><span>Supervisor hours returned</span><b className="num">{fmtNum(r.supHours)}</b></li>
+              <li><span>Major repairs avoided</span><b className="num">{fmtNum(v.majorRepairsAvoided || 0)}</b></li>
             </ol>
           </div>
         </section>
@@ -170,6 +172,8 @@ export function ROICalculator() {
             <span>Paperwork = reports × days × (paper − digital minutes) × labor rate.</span>
             <span>Missed defects = road calls × 12 × preventable share × cost per call.</span>
             <span>Downtime = vehicle-defect reports that hold a bus × hours saved × bus-hour cost.</span>
+            <span>Supervisor time = supervisors × hours saved per week × 52 × labor rate. Counts triage and follow-up Guardian takes over, not operators' paperwork.</span>
+            <span>Major repairs avoided = repairs × extra cost when a small defect grows. Separate from in-service road calls.</span>
             <span>Year 1 cost = annual license + one-time implementation. Year 2+ = license only.</span>
             <span>Routing delay is shown for context and not counted as dollars, to avoid double counting.</span>
           </section>
