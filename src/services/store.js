@@ -7,7 +7,7 @@ import { stopById } from './maps.js';
 import { classifyLocal, resolveLocation, toContractJson, recommendedAction } from './ai.js';
 import * as remote from './supabase.js';
 
-const KEY = 'smart-ops-ai.state.v1';
+const KEY = 'smart-ops-ai.state.v2';
 const TAB = Math.random().toString(36).slice(2);
 const FIRST_LIVE_SEQ = 142;
 
@@ -76,7 +76,7 @@ function buildSeedTicket(s, now) {
     route: s.route,
     garage: garageOf(s.vehicle),
     shift: shiftOf(createdAt),
-    stopId: s.stopId,
+    stopId: stop?.id ?? s.stopId,
     location: { lat: stop?.lat, lng: stop?.lng, label: stop?.name, source: 'bus position' },
     reportType: s.reportType,
     originalText: s.text,

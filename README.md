@@ -86,7 +86,7 @@ supabase/schema.sql
 
 ## Known limits / next steps
 
-- Route lines are simplified corridors. Swap in SMART's public GTFS `shapes.txt` / `stops.txt` for exact geometry and real stop IDs.
+- Route shapes and stops come from SMART's public GTFS feed, downloaded during each Netlify build by `scripts/fetch-gtfs.mjs` (prebuild). If the feed can't be reached, the map falls back to simplified corridors and the map credit says so. Test locally with `GTFS_FILE=smart_gtfs.zip npm run gtfs`.
 - The map is a built-in vector map so it works offline and in sandboxed previews. Leaflet + OpenStreetMap tiles can replace `IssueMap.jsx` if street-level detail is wanted.
 - Garage names ("Oakland/Macomb/Wayne Terminal") are placeholders — confirm SMART's actual facility names before presenting.
 - Live voice uses the browser's speech recognition (Chrome, Safari). Where unavailable it records audio and calls `transcribe-report`; typing and demo scripts always work.

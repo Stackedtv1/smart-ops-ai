@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ROUTES, STOPS, MILE_ROADS, MAP_W, MAP_H, project, stopById } from '../services/maps.js';
+import { ROUTES, STOPS, MAP_STOPS, MILE_ROADS, MAP_W, MAP_H, BOUNDS, GTFS_META, project, stopById } from '../services/maps.js';
 import { fmtTime } from '../lib/time.js';
 import { deptLabel, catShort } from '../lib/config.js';
 import { PriorityPill, StatusPill } from './ui.jsx';
@@ -33,7 +33,7 @@ function fitView(box, aspect) {
   return { x: (box[0] + box[2]) / 2 - w / 2, y: (box[1] + box[3]) / 2 - h / 2, w };
 }
 
-const DEFAULT_BOX = (() => {
+const DEFAULT_BOX = GTFS_META.live ? [0, 0, MAP_W, MAP_H] : (() => {
   const [x0, y0] = project(42.625, -83.40);
   const [x1, y1] = project(42.285, -83.0);
   return [x0, y0, x1, y1];
@@ -165,17 +165,17 @@ export default function IssueMap({ tickets, onOpen, height = 480, focus, showRes
           fill="none" stroke="var(--map-water)" strokeWidth={fs(14)} strokeLinecap="round" strokeLinejoin="round"
         />
         {MILE_ROADS.map((m) => {
-          const [x0, y] = project(m.lat, -83.42);
-          const [x1] = project(m.lat, -82.97);
+          const [x0, y] = project(m.lat, BOUNDS.west);
+          const [x1] = project(m.lat, BOUNDS.east);
           return (
             <g key={m.name}>
               <line x1={x0} y1={y} x2={x1} y2={y} stroke="var(--map-road)" strokeWidth={fs(1.5)} />
-              <text x={project(m.lat, -83.405)[0]} y={y - fs(4)} fontSize={fs(10.5)} fill="var(--map-label)" fontWeight="600">{m.name}</text>
+              <text x={project(m.lat, BOUNDS.west + 0.01)[0]} y={y - fs(4)} fontSize={fs(10.5)} fill="var(--map-label)" fontWeight="600">{m.name}</text>
             </g>
           );
         })}
         {/* 8 Mile = Wayne county line; Dequindre = Oakland / Macomb line */}
-        <line {...lineProps(42.4467, -83.42, 42.4467, -82.97)} stroke="var(--map-label)" strokeWidth={fs(1.2)} strokeDasharray={`${fs(6)} ${fs(4)}`} opacity=".7" />
+        <line {...lineProps(42.4467, BOUNDS.west, 42.4467, BOUNDS.east)} stroke="var(--map-label)" strokeWidth={fs(1.2)} strokeDasharray={`${fs(6)} ${fs(4)}`} opacity=".7" />
         <line {...lineProps(42.4467, -83.0855, 42.668, -83.093)} stroke="var(--map-label)" strokeWidth={fs(1.2)} strokeDasharray={`${fs(6)} ${fs(4)}`} opacity=".7" />
         {COUNTY_LABELS.map((c) => {
           const [x, y] = project(c.lat, c.lng);
@@ -186,14 +186,14 @@ export default function IssueMap({ tickets, onOpen, height = 480, focus, showRes
           );
         })}
 
-        {ROUTES.filter((r) => r.id !== '462').map((r) => (
+        {ROUTES.filter((r) => r.path.length > 1 && (r.id !== '462' || r.fromFeed)).map((r) => (
           <polyline
             key={r.id}
             points={r.path.map(([a, b]) => project(a, b).join(',')).join(' ')}
             fill="none" stroke={r.color} strokeWidth={fs(r.type === 'FAST' ? 5 : 3.5)} strokeLinecap="round" strokeLinejoin="round" opacity=".85"
           />
         ))}
-        {ROUTES.filter((r) => r.id !== '462').map((r) => {
+        {ROUTES.filter((r) => r.id !== '462' && r.path.length > 1).map((r) => {
           const mid = r.path[Math.min(r.path.length - 1, Math.floor(r.path.length * 0.62))];
           const [x, y] = project(mid[0], mid[1]);
           const label = r.id === '461' ? '461/462' : r.id;
@@ -205,9 +205,9 @@ export default function IssueMap({ tickets, onOpen, height = 480, focus, showRes
             </g>
           );
         })}
-        {STOPS.map((s) => {
+        {(v.w < 520 ? MAP_STOPS : STOPS).map((s) => {
           const [x, y] = project(s.lat, s.lng);
-          return <circle key={s.id} cx={x} cy={y} r={fs(3.2)} fill="var(--surface)" stroke="var(--ink-2)" strokeWidth={fs(1.2)} />;
+          return <circle key={s.gtfsId || s.id} cx={x} cy={y} r={fs(v.w < 520 ? 2.2 : 2.8)} fill="var(--surface)" stroke="var(--ink-2)" strokeWidth={fs(1)} opacity=".8"><title>{`Stop ${s.id} · ${s.name}`}</title></circle>;
         })}
 
         {placed.map(({ t, x, y, ox, oy }) => {
@@ -239,6 +239,11 @@ export default function IssueMap({ tickets, onOpen, height = 480, focus, showRes
         <button onClick={() => zoom(1 / 1.4)} aria-label="Zoom in">+</button>
         <button onClick={() => zoom(1.4)} aria-label="Zoom out">−</button>
         <button onClick={() => { setView(null); setSel(null); }} aria-label="Reset map" style={{ fontSize: 13 }}>⟲</button>
+      </div>
+      <div className="map-credit">
+        {GTFS_META.live
+          ? `Routes & stops: ${GTFS_META.source}${GTFS_META.feedVersion ? ` (feed ${GTFS_META.feedVersion})` : ''}`
+          : 'Simplified route corridors'}
       </div>
       <div className="map-legend">
         <span><i style={{ background: 'var(--high)' }} />High</span>

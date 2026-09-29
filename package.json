@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/fetch-gtfs.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gtfs": "node scripts/fetch-gtfs.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",
