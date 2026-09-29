@@ -70,13 +70,13 @@ export default function TicketDetail({ id }) {
 
       {t.status === 'Merged' && (
         <div className="notice notice-info">
-          <b>Merged duplicate.</b> The AI Operations Copilot merged this report into{' '}
+          <b>Merged duplicate.</b> SMART Ops AI Guardian merged this report into{' '}
           <a href={`#/ticket/${t.mergedInto}`} onClick={(e) => { e.preventDefault(); go(`/ticket/${t.mergedInto}`); }}>{t.mergedInto}</a>, where the work is tracked. The report stays on file as evidence.
         </div>
       )}
       {t.linkedReports?.length > 0 && (
         <section className="panel">
-          <div className="panel-h"><h2>Linked reports</h2><span className="small muted">Duplicates merged by Copilot</span></div>
+          <div className="panel-h"><h2>Linked reports</h2><span className="small muted">Duplicates merged by Guardian</span></div>
           <div className="panel-b stack-sm">
             {t.linkedReports.map((r) => (
               <div key={r.id} className="ev row between wrap" style={{ gap: 8 }}>

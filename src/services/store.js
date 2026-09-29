@@ -7,7 +7,7 @@ import { stopById } from './maps.js';
 import { classifyLocal, resolveLocation, toContractJson, recommendedAction } from './ai.js';
 import * as remote from './supabase.js';
 
-const KEY = 'smart-ops-ai.state.v2';
+const KEY = 'smart-ops-ai.state.v3';
 const TAB = Math.random().toString(36).slice(2);
 const FIRST_LIVE_SEQ = 142;
 
@@ -103,11 +103,11 @@ function freshState(now = Date.now()) {
     tickets: seed.reports.map((s) => buildSeedTicket(s, now)),
     scenarioLoaded: false,
     liveCount: 0,
-    copilot: emptyCopilot(),
+    guardian: emptyGuardian(),
   };
 }
 
-export function emptyCopilot() {
+export function emptyGuardian() {
   return { audit: [], incidents: [], handled: {}, followups: [], sweeps: 0, checks: 0, lastSweep: null, startedAt: Date.now() };
 }
 
@@ -117,7 +117,7 @@ function load() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (s.day !== dayKey()) return null; // new day -> fresh demo
-    return s.copilot ? s : { ...s, copilot: emptyCopilot() };
+    return s.guardian ? s : { ...s, guardian: emptyGuardian() };
   } catch {
     return null;
   }
@@ -189,10 +189,10 @@ export function useStore(selector = (s) => s) {
 
 export const getTicket = (id) => state.tickets.find((t) => t.id === id);
 
-// ---- used by the Operations Copilot ----
+// ---- used by SMART Ops AI Guardian ----
 export const emitEvent = (ev) => emit(ev);
-export function setCopilot(fn) {
-  commit({ ...state, copilot: fn(state.copilot || emptyCopilot()) });
+export function setGuardian(fn) {
+  commit({ ...state, guardian: fn(state.guardian || emptyGuardian()) });
 }
 export function restoreTickets(prev) {
   const byId = new Map(prev.map((t) => [t.id, t]));

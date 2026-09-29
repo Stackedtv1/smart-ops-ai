@@ -17,19 +17,19 @@ const FILTERS = [
   ['resolved', 'Resolved today'],
 ];
 
-function CopilotStrip() {
+function GuardianStrip() {
   const { go } = useNav();
-  const c = useStore((s) => s.copilot);
+  const c = useStore((s) => s.guardian);
   const fixes = c.audit.filter((a) => a.kind === 'auto-fix' && !a.undone).length;
   const esc = c.followups.filter((f) => !f.closed).length;
   const latest = c.incidents[0];
   return (
-    <button className="cp-strip" onClick={() => go('/copilot')}>
-      <span className="row wrap" style={{ gap: 8, minWidth: 0 }}><span className="live-dot" /><b>AI Ops Copilot</b><MonitorModeBadge compact /></span>
+    <button className="cp-strip" onClick={() => go('/guardian')}>
+      <span className="row wrap" style={{ gap: 8, minWidth: 0 }}><span className="live-dot" /><b>Guardian</b><MonitorModeBadge compact /></span>
       <span className="num"><b>{fixes}</b> auto-fixes</span>
       <span className="num"><b>{esc}</b> escalation{esc === 1 ? '' : 's'} awaiting a person</span>
       {latest && <span className="grow cp-latest">Latest: {latest.title}</span>}
-      <span className="cp-open">Open Copilot →</span>
+      <span className="cp-open">Open Guardian →</span>
     </button>
   );
 }
@@ -79,7 +79,7 @@ export default function Dashboard({ compact }) {
         <div className="kpi"><span className="n">{stats.assignedPct}%</span><span className="l">Assigned</span></div>
       </div>
 
-      <CopilotStrip />
+      <GuardianStrip />
 
       <div className="main-grid">
         <section className="panel">

@@ -531,3 +531,5 @@ p { margin: 0; }
 .mode-badge b { font-weight: 800; letter-spacing: .06em; }
 .mode-badge .mode-row:last-child:not(:first-child) { color: var(--ink-2); }
 .mode-badge.compact { padding: 2px 8px; font-size: 11px; }
+.cp-chat.tall .cp-msgs { max-height: none; min-height: 420px; height: calc(100vh - 380px); }
+@media (max-width: 1000px) { .cp-chat.tall .cp-msgs { height: auto; min-height: 280px; max-height: 60vh; } }
