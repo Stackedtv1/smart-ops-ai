@@ -6,6 +6,7 @@ import {
   createLostItem, demoLostItemDraft, directionsOf, stopsOnRoute, terminalName, LF_STAGES, ROUTE_LIST,
 } from '../services/ops.js';
 import DashShell from '../components/DashShell.jsx';
+import { ServiceAlerts } from '../components/OpsWidgets.jsx';
 import { CustodyChain } from '../components/OpsWidgets.jsx';
 import { RouteBadge } from '../components/ui.jsx';
 
@@ -91,6 +92,8 @@ export default function LostFound() {
         </div>
         <span className="demo-data">Demo data</span>
       </div>
+
+      <ServiceAlerts audience="customer" />
 
       <div className="lf-pipeline">
         {LF_STAGES.map((s) => <div key={s}><span className="n num">{counts[s] || 0}</span><span className="l">{s}</span></div>)}

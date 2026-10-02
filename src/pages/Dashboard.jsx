@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { useStore, dashboardStats, patternAlerts, isOpen } from '../services/store.js';
 import DashShell from '../components/DashShell.jsx';
+import { ServiceAlerts } from '../components/OpsWidgets.jsx';
 import { MonitorModeBadge } from '../components/ui.jsx';
 import IssueMap from '../components/IssueMap.jsx';
 import TicketTable, { sortQueue, useNow } from '../components/TicketTable.jsx';
@@ -64,6 +65,8 @@ export default function Dashboard({ compact }) {
         </div>
         <span className="demo-data">Demo data</span>
       </div>
+
+      <ServiceAlerts audience="command" />
 
       <div className="stat-row">
         <StatCard n={stats.open} label="Open Issues" lead />

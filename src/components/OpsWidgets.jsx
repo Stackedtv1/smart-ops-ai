@@ -1,9 +1,32 @@
 import { useNav } from '../lib/router.jsx';
 import { OPERATOR } from '../lib/config.js';
 import { fmtTime, ago } from '../lib/time.js';
-import { ackDetour, ackMessage, terminalName, LF_STAGES } from '../services/ops.js';
+import { ackDetour, ackMessage, terminalName, LF_STAGES, riderAlertText } from '../services/ops.js';
+import { useStore } from '../services/store.js';
 import { stopById } from '../services/maps.js';
 import { Icon } from './ui.jsx';
+
+// The one-line summary that sits directly above every detour map.
+export function DetourSummary({ d }) {
+  if (!d) return null;
+  return (
+    <div className="dsum" role="status">
+      <span><b>{d.bypassed.length}</b> stops bypassed</span>
+      <span className="dot">•</span>
+      <span><b>{d.temporary.length}</b> temporary stops</span>
+      <span className="dot">•</span>
+      <span className="delay">+{d.delayMin} min</span>
+    </div>
+  );
+}
+
+export function TurnIcon({ turn, size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {turn === 'left' ? <path d="M17 20v-8a3 3 0 0 0-3-3H6M10 5L6 9l4 4" /> : <path d="M7 20v-8a3 3 0 0 1 3-3h8M14 5l4 4-4 4" />}
+    </svg>
+  );
+}
 
 export function DetourBanner({ detour, bus = OPERATOR.bus, compact = false, onMap }) {
   if (!detour) return null;
@@ -19,17 +42,17 @@ export function DetourBanner({ detour, bus = OPERATOR.bus, compact = false, onMa
       {!compact && (
         <ol className="detour-steps">
           {detour.steps.map((s, i) => (
-            <li key={i}><b>{s.text}</b><span>{s.at}</span></li>
+            <li key={i}><b>{s.text}</b><span>{s.at}{s.then ? ` · then ${s.then}` : ''}</span></li>
           ))}
         </ol>
       )}
       <div className="detour-meta">
-        <span>Est. delay <b>{detour.delayMin} min</b></span>
         <span><b>{detour.bypassed.length}</b> stops bypassed</span>
         <span><b>{detour.temporary.length}</b> temporary stops</span>
+        <span><b>+{detour.delayMin} min</b></span>
       </div>
       <div className="row wrap" style={{ gap: 8 }}>
-        {onMap && <button className="btn btn-sm" onClick={onMap}>Show on map</button>}
+        {onMap && <button className="btn btn-sm" onClick={onMap}>Open navigation</button>}
         {acked ? (
           <span className="tag tag-ok">✓ Acknowledged {fmtTime(detour.acks[bus])}</span>
         ) : (
@@ -113,7 +136,7 @@ export function ReliefRow({ r, onPick, active }) {
           <span className="num relief-d">{r.miles.toFixed(1)} mi</span>
         </span>
         <span className="relief-tags">
-          {r.real && <span className="rt rt-real">Real location</span>}
+          <span className={`tier tier-${r.tier}`}>{r.tier === 'smart' ? 'SMART Verified' : r.tier === 'partner' ? 'Pending verification' : 'Public backup'}</span>
           <span className={`rt rt-${r.status.code}`}>{r.status.label}</span>
           <span className={`rt rt-${pull[1]}`}>{pull[0]}</span>
           {r.accessible && <span className="rt">♿ Accessible</span>}
@@ -124,4 +147,18 @@ export function ReliefRow({ r, onPick, active }) {
       </span>
     </button>
   );
+}
+
+// Same detour update, shown on Command Center and Customer Service screens.
+export function ServiceAlerts({ audience = 'command' }) {
+  const detours = useStore((s) => s.ops.detours.filter((d) => d.active));
+  if (!detours.length) return null;
+  return detours.map((d) => (
+    <div key={d.id} className="detour compact">
+      <div className="detour-h"><span className="detour-tag">SERVICE ALERT · DETOUR</span><span className="mono xs">{d.id} · {fmtTime(d.at)}</span></div>
+      <div className="detour-t" style={{ fontSize: 20 }}>Routes {d.routes.join('/')} {d.direction}: {d.closure}</div>
+      <div className="detour-meta"><span><b>{d.bypassed.length}</b> stops bypassed</span><span><b>{d.temporary.length}</b> temporary stops</span><span><b>+{d.delayMin} min</b></span><span>{Object.keys(d.acks).length}/{d.recipients.length} operators acknowledged</span></div>
+      {audience === 'customer' && <div className="rider-alert" style={{ color: 'var(--ink)' }}><b>Tell riders:</b> {riderAlertText(d)}</div>}
+    </div>
+  ));
 }

@@ -7,7 +7,7 @@ import { stopById, routeById } from '../services/maps.js';
 import {
   operatorPosition, reliefFor, activeDetourFor, nextStops, openLostForBus, driverResponse, driverFoundItem,
   inboxFor, sendMessage, createFieldReport, FIELD_KINDS, terminalName, vehicleOf, isMoving, RELIEF,
-  reliefClock, markBreak, routeReliefStrip, directionsOf, routeRunMin, routeEnds,
+  reliefClock, markBreak, routeReliefStrip, directionsOf, routeRunMin, routeEnds, TIERS, BUS_ACCESS,
 } from '../services/ops.js';
 import { Icon, readPhoto } from '../components/ui.jsx';
 import OpsMap from '../components/OpsMap.jsx';
@@ -23,76 +23,82 @@ export function OperatorRelief() {
   const { go } = useNav();
   const ops = useStore((s) => s.ops);
   const pos = operatorPosition();
-  const list = useMemo(() => reliefFor({ route: pos.route, lat: pos.lat, lng: pos.lng, ops, f: pos.f, dir: pos.dir }), [ops]); // eslint-disable-line react-hooks/exhaustive-deps
+  const list = useMemo(() => reliefFor({ route: pos.route, lat: pos.lat, lng: pos.lng, ops, f: pos.f, dir: pos.dir }), [ops, pos.f]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sel, setSel] = useState(null);
   const [sent, setSent] = useState(null);
+  const [more, setMore] = useState(false);
   const detour = activeDetourFor(ops, pos.route);
-  const best = list.find((r) => r.usable && r.ahead) || list.find((r) => r.usable);
-  const cur = list.find((r) => r.id === sel) || best;
+  const best3 = list.filter((r) => r.ahead !== false && r.status.code !== 'closed' && r.status.code !== 'hours').slice(0, 3);
+  const cur = list.find((r) => r.id === sel);
   const clock = reliefClock(ops, OPERATOR.bus);
   const hrs = `${Math.floor(clock.minutes / 60)} hr ${clock.minutes % 60} min`;
-  const fit = [[pos.lat, pos.lng], ...list.filter((r) => r.ahead !== false).slice(0, 3).map((r) => [r.lat, r.lng])];
+  const fit = [[pos.lat, pos.lng], ...best3.map((r) => [r.lat, r.lng])];
 
   return (
-    <OperatorShell title="Restroom / Relief" back="/operator">
-      <StoppedOnly what="Relief Finder">
-        <div className={`relief-clock ${clock.minutes >= 90 ? 'long' : ''}`}>
-          <span className="eyebrow">Since your last break</span>
-          <b className="num">{hrs}</b>
-          <span className="small">{clock.minutes >= 90 ? 'Long stretch on the route. ' : ''}No need to deadhead back to the terminal. Here are real stops along Route {pos.route}.</span>
+    <OperatorShell title="Restroom" back="/operator">
+      <StoppedOnly what="Restroom options">
+        <div className="row between" style={{ alignItems: 'baseline' }}>
+          <h2 className="display" style={{ fontSize: 26 }}>Best options ahead</h2>
+          <span className={`small ${clock.minutes >= 90 ? '' : 'muted'}`} style={clock.minutes >= 90 ? { color: 'var(--med)', fontWeight: 800 } : null}>{hrs} since break</span>
+        </div>
+        {detour && <div className="notice notice-warn"><b>Detour active.</b> Options recalculated for the detour route.</div>}
+
+        <div className="best3">
+          {best3.map((r, i) => (
+            <button key={r.id} onClick={() => go(`/operator/navigate?to=${r.id}`)} aria-label={`Navigate to ${r.name}`}>
+              <span className="n">{i + 1}</span>
+              <span style={{ minWidth: 0 }}>
+                <span className="nm" style={{ display: 'block' }}>{r.name}</span>
+                <span className="ln" style={{ display: 'block' }}>{r.mins} min · {BUS_ACCESS[r.busPull]} · {r.status.label}</span>
+                <span className={`tier tier-${r.tier}`}>{TIERS[r.tier]?.label}</span>
+              </span>
+              <span className="go">GO</span>
+            </button>
+          ))}
+          {best3.length === 0 && <div className="notice notice-warn">No open options ahead on this trip. Tell Dispatch you need relief.</div>}
+        </div>
+        <button className="btn" onClick={() => { const r = best3[0]; sendMessage({ to: { kind: 'dispatch' }, from: `Bus ${OPERATOR.bus} · Route ${OPERATOR.route}`, fromKind: 'operator', fromBus: OPERATOR.bus, text: r ? `Taking a relief break at ${r.name} (${r.address || r.hours}).` : 'Need a relief break, no open option ahead.' }); setSent(true); }}>Tell Dispatch I'm taking a break</button>
+        {sent && <span className="small" style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ Dispatch knows.</span>}
+
+        <div className="notice notice-info small">
+          <b>SMART Verified</b> = SMART confirmed operator access. <b>Pending verification</b> = facility exists, access not yet confirmed by SMART. <b>Public backup</b> = public restroom during open hours.
         </div>
 
-        {detour && <div className="notice notice-warn"><b>Detour active.</b> Relief points recalculated for the detour path.</div>}
-
-        {best && (
-          <div className="relief-best">
-            <span className="eyebrow">Best option ahead</span>
-            <b style={{ fontSize: 19 }}>{best.name}</b>
-            <span className="small">{best.miles.toFixed(1)} mi ahead · about {best.mins} min · {best.status.label}</span>
-            <span className="small">{best.access}</span>
-            <div className="row wrap" style={{ gap: 8, marginTop: 6 }}>
-              <button className="btn btn-primary" onClick={() => go(`/operator/navigate?to=${best.id}`)}><Icon name="nav" size={16} /> Navigate</button>
-              <button className="btn" onClick={() => { sendMessage({ to: { kind: 'dispatch' }, from: `Bus ${OPERATOR.bus} · Route ${OPERATOR.route}`, fromKind: 'operator', fromBus: OPERATOR.bus, text: `Taking a relief break at ${best.name} (${best.address}).` }); setSent(best.name); }}>Tell dispatch</button>
+        <button className="btn btn-ghost" onClick={() => setMore((m) => !m)}>{more ? 'Hide' : 'Show'} map, full list and coverage</button>
+        {more && (
+          <>
+            <RouteReliefStrip route={pos.route} pos={pos} ops={ops} />
+            <OpsMap routes={[pos.route]} relief={list} you={pos} fit={fit} detours={detour ? [detour] : []} height={240} label="Relief options map" legend={false} />
+            <div className="stack-sm">
+              {list.map((r) => <ReliefRow key={r.id} r={r} active={cur?.id === r.id} onPick={() => setSel(r.id)} />)}
             </div>
-            {sent && <span className="small" style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ Dispatch knows you're stopping at {sent}.</span>}
-          </div>
-        )}
-
-        <RouteReliefStrip route={pos.route} pos={pos} ops={ops} />
-
-        <OpsMap routes={[pos.route]} relief={list} you={pos} fit={fit} detours={detour ? [detour] : []} height={240} label="Relief points map" legend={false} />
-        <div className="stack-sm">
-          {list.map((r) => <ReliefRow key={r.id} r={r} active={cur?.id === r.id} onPick={() => setSel(r.id)} />)}
-        </div>
-        {cur && (
-          <section className="panel panel-b stack-sm">
-            <div className="row between" style={{ gap: 8 }}>
-              <b style={{ fontSize: 17 }}>{cur.name}</b>
-              {cur.real && <span className="rt rt-real">Real location</span>}
-            </div>
-            <dl className="kv">
-              {cur.address && <><dt>Address</dt><dd>{cur.address}</dd></>}
-              <dt>Hours</dt><dd>{cur.hours}</dd>
-              <dt>Bus pull-in</dt><dd>{cur.busPullNote}</dd>
-              <dt>Access</dt><dd>{cur.access}</dd>
-              <dt>Type</dt><dd>{cur.type}</dd>
-              {cur.agreement && <><dt>Status</dt><dd>{cur.agreement}</dd></>}
-              <dt>Accessible</dt><dd>{cur.accessible ? 'Yes' : 'No'}</dd>
-            </dl>
-            {cur.status.reports.length > 0 && (
-              <div className="notice notice-safety">
-                <b>Operators reported a problem:</b> {cur.status.reports.map((f) => `“${f.text}” (Bus ${f.bus}, ${fmtTime(f.at)})`).join(' ')}
-              </div>
+            {cur && (
+              <section className="panel panel-b stack-sm">
+                <div className="row between" style={{ gap: 8 }}>
+                  <b style={{ fontSize: 17 }}>{cur.name}</b>
+                  <span className={`tier tier-${cur.tier}`}>{TIERS[cur.tier]?.label}</span>
+                </div>
+                <dl className="kv">
+                  {cur.address && <><dt>Address</dt><dd>{cur.address}</dd></>}
+                  <dt>Hours</dt><dd>{cur.hours}</dd>
+                  <dt>Bus access</dt><dd>{cur.busPullNote}</dd>
+                  <dt>Access</dt><dd>{cur.access}</dd>
+                  <dt>Accessible</dt><dd>{cur.accessible ? 'Yes' : 'No'}</dd>
+                </dl>
+                {cur.status.reports.length > 0 && (
+                  <div className="notice notice-safety"><b>Operators reported a problem:</b> {cur.status.reports.map((f) => `“${f.text}” (Bus ${f.bus}, ${fmtTime(f.at)})`).join(' ')}</div>
+                )}
+                <div className="row wrap" style={{ gap: 8 }}>
+                  <button className="btn btn-primary" onClick={() => go(`/operator/navigate?to=${cur.id}`)}><Icon name="nav" size={16} /> Navigate</button>
+                  <button className="btn" onClick={() => markBreak(OPERATOR.bus)}>I took my break</button>
+                  <button className="btn" onClick={() => go(`/operator/field?relief=${cur.id}`)}>Report a problem</button>
+                </div>
+                {cur.source && <span className="xs muted">Source: <a href={cur.source} target="_blank" rel="noreferrer">{cur.sourceLabel || 'public listing'}</a></span>}
+              </section>
             )}
-            <div className="row wrap" style={{ gap: 8 }}>
-              <button className="btn btn-primary" onClick={() => go(`/operator/navigate?to=${cur.id}`)}><Icon name="nav" size={16} /> Navigate</button>
-              <button className="btn" onClick={() => { markBreak(OPERATOR.bus); setSent(null); }}>I took my break</button>
-              <button className="btn" onClick={() => go(`/operator/field?relief=${cur.id}`)}>Report a problem</button>
-            </div>
-            {cur.source && <span className="xs muted">Source: <a href={cur.source} target="_blank" rel="noreferrer">{cur.sourceLabel || 'public listing'}</a></span>}
-          </section>
+          </>
         )}
-        <p className="xs muted">Route {pos.route} locations are real public places, with addresses and hours from public sources. Hours can change. Operator use still needs SMART agreements and on-site checks. Bus position and other routes' points are simulated.</p>
+        <p className="xs muted">Route {pos.route} locations are real places with public addresses and hours (hours can change). None is promised to operators until SMART verifies access. Bus position and other routes' points are simulated.</p>
       </StoppedOnly>
     </OperatorShell>
   );
@@ -132,110 +138,6 @@ function RouteReliefStrip({ route, pos, ops }) {
 
 const SHORT = { 'Jason Hargrove Transit Center': 'Hargrove TC', 'Detroit Public Library – Main': 'Detroit Library', 'Ferndale Area District Library': 'Ferndale Library', 'SMART Royal Oak Transit Center': 'Royal Oak TC', 'Royal Oak Public Library': 'Royal Oak Library', 'Baldwin Public Library': 'Birmingham Library', 'Troy Public Library': 'Troy Library' };
 const shortName = (n) => SHORT[n] || n;
-
-// ---------------------------------------------------------------------------
-// NAVIGATION (route-aware, detour-aware)
-// ---------------------------------------------------------------------------
-export function OperatorNavigate({ to }) {
-  const { go } = useNav();
-  const ops = useStore((s) => s.ops);
-  const moving = isMoving(ops, OPERATOR.bus);
-  const pos = operatorPosition();
-  const detour = activeDetourFor(ops, pos.route);
-  const stops = nextStops(pos, 4);
-  const relief = useMemo(() => reliefFor({ route: pos.route, lat: pos.lat, lng: pos.lng, ops, f: pos.f, dir: pos.dir }), [ops]); // eslint-disable-line react-hooks/exhaustive-deps
-  const dest = to ? relief.find((r) => r.id === to) || null : null;
-  const field = ops.field.filter((f) => f.route === pos.route).slice(0, 6);
-  const nextStop = stops[0];
-  const fit = [[pos.lat, pos.lng], ...stops.slice(0, 3).map((s) => [s.lat, s.lng]), ...(detour ? detour.detourPath : []), ...(dest ? [[dest.lat, dest.lng]] : [])];
-
-  // While moving, only the glanceable next-turn card shows.
-  if (moving) {
-    return (
-      <OperatorShell title="Navigation" back="/operator">
-        <div className="glance">
-          {detour ? (
-            <>
-              <span className="detour-tag">DETOUR</span>
-              <div className="glance-turn">{detour.steps[0].text}</div>
-              <div className="glance-at">at {detour.steps[0].at}</div>
-            </>
-          ) : (
-            <>
-              <span className="eyebrow">Next stop</span>
-              <div className="glance-turn">{nextStop?.name || 'End of line'}</div>
-            </>
-          )}
-        </div>
-        <div className="locked" style={{ marginTop: 0 }}>
-          <div>Map controls lock while moving. Glance view only.</div>
-        </div>
-      </OperatorShell>
-    );
-  }
-
-  return (
-    <OperatorShell title="Navigation" back="/operator">
-      {detour && (
-        <div className="next-turn">
-          <span className="detour-tag">DETOUR · NEXT TURN</span>
-          <b>{detour.steps[0].text}</b>
-          <span className="small">at {detour.steps[0].at} · then {detour.steps.length - 1} more turns · rejoin at Stop {stopById(detour.rejoinStop)?.id}</span>
-        </div>
-      )}
-      <OpsMap routes={[pos.route]} you={pos} fit={fit} detours={detour ? [detour] : []} relief={dest ? [dest] : relief.slice(0, 3)} field={field} height={300} label="Route navigation map" legend={false} />
-      <div className="nav-legend xs muted">
-        <span><i style={{ background: routeById(pos.route)?.color }} />Normal route</span>
-        {detour && <span><i style={{ background: 'var(--flag)' }} />Detour</span>}
-        {detour && <span><i style={{ background: 'var(--high)' }} />Closed</span>}
-      </div>
-
-      {dest && (
-        <section className="panel panel-b stack-sm">
-          <span className="eyebrow">Relief destination</span>
-          <b style={{ fontSize: 17 }}>{dest.name}</b>
-          <span className="small">{dest.miles.toFixed(1)} mi · about {dest.mins} min · {dest.status.label}{dest.detourNote ? ` · ${dest.detourNote}` : ''}</span>
-          <span className="small"><b>Pull-in:</b> {dest.busPullNote}</span>
-          <span className="small"><b>Access:</b> {dest.access}</span>
-          <span className="xs muted">Directions follow bus-legal streets. Production uses SMART's approved bus routing from CAD/AVL or a bus-routing engine.</span>
-        </section>
-      )}
-
-      <section className="panel">
-        <div className="panel-h"><h2>Next stops</h2><span className="small muted">{pos.dir}</span></div>
-        <ul className="nav-stops">
-          {stops.map((s, i) => {
-            const isRejoin = detour && s.id === stopById(detour.rejoinStop)?.id;
-            return (
-              <li key={s.id}>
-                <span className="mono xs muted">{s.id}</span>
-                <span className="grow">{s.name}</span>
-                {i === 0 && <span className="tag">Next</span>}
-                {isRejoin && <span className="tag" style={{ background: 'var(--flag)', color: 'var(--flag-ink)' }}>Rejoin</span>}
-              </li>
-            );
-          })}
-          {detour && detour.bypassed.map((b) => (
-            <li key={b} className="bypassed"><span className="mono xs">—</span><span className="grow">{b}</span><span className="tag" style={{ background: 'var(--high-soft)', color: 'var(--high)' }}>Bypassed</span></li>
-          ))}
-          {detour && detour.temporary.map((b) => (
-            <li key={b}><span className="mono xs">TMP</span><span className="grow">{b}</span><span className="tag" style={{ background: 'var(--flag)', color: 'var(--flag-ink)' }}>Temporary</span></li>
-          ))}
-        </ul>
-      </section>
-
-      {detour && <DetourBanner detour={detour} />}
-
-      <div className="nav-actions">
-        <button onClick={() => go('/operator/relief')}><Icon name="restroom" size={22} />Restroom</button>
-        <button onClick={() => go('/operator/field')}><Icon name="cone" size={22} />Hazard</button>
-        <button onClick={() => go('/operator/field?kind=road_blocked')}><Icon name="block" size={22} />Road blocked</button>
-        <button onClick={() => go('/operator/dispatch')}><Icon name="radio" size={22} />Dispatch</button>
-      </div>
-      <p className="xs muted">Positions and timing are simulated for the demo. SMART Ops reads them from the agency's existing AVL in production, and detours publish through the CAD/AVL SMART already owns.</p>
-    </OperatorShell>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // LOST ITEM (operator)

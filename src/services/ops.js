@@ -5,7 +5,7 @@
 import opsData from '../data/demoOps.json';
 import vehicleData from '../data/demoVehicles.json';
 import { getState, setOps, createTicket, emitEvent, isOpen } from './store.js';
-import { ROUTES, STOPS, routeById, stopById, nearestStop } from './maps.js';
+import { ROUTES, STOPS, MAP_STOPS, routeById, stopById, nearestStop } from './maps.js';
 import { MIN, fmtTime, yymmdd, startOfDay } from '../lib/time.js';
 import { OPERATOR } from '../lib/config.js';
 import { classifyField, FIELD_KINDS, LF_STAGES } from './opsSeed.js';
@@ -13,6 +13,12 @@ import { classifyField, FIELD_KINDS, LF_STAGES } from './opsSeed.js';
 export { FIELD_KINDS, LF_STAGES, classifyField };
 export const TERMINALS = opsData.terminals;
 export const RELIEF = opsData.relief;
+export const TIERS = {
+  smart: { label: 'SMART Verified', short: 'SMART Verified', rank: 0 },
+  partner: { label: 'Partner Access – Pending Verification', short: 'Pending verification', rank: 1 },
+  public: { label: 'Public Backup', short: 'Public backup', rank: 2 },
+};
+export const BUS_ACCESS = { safe: 'Bus access', caution: 'Limited bus access', no: 'Walk-up only' };
 export const DETOUR_TEMPLATES = opsData.detourTemplates;
 export const terminalById = (id) => TERMINALS.find((t) => t.id === id);
 export const terminalName = (id) => terminalById(id)?.name || id;
@@ -371,10 +377,11 @@ export function createFieldReport({ text, bus, route, by, lat, lng, kind }) {
     reliefId = (named || (best && best.d < 3000 ? best.r : null))?.id || null;
   }
   const template = k === 'road_blocked' ? suggestDetour(text, route) : null;
+  const aff = k === 'road_blocked' || k === 'construction' ? affectedBy(lat, lng) : null;
   let report = null;
   setOps((o) => {
     const { id, seq } = nextId(o, 'fr', 'FR');
-    report = { id, at: now, bus, route, by, text, lat, lng, kind: k, label: meta.label, routedTo: meta.to, sev: meta.sev, confidence: c.confidence, direction: c.direction, reliefId, suggestedDetour: template?.id || null, status: 'Open' };
+    report = { id, at: now, bus, route, by, text, lat, lng, kind: k, label: meta.label, routedTo: meta.to, sev: meta.sev, confidence: c.confidence, direction: c.direction, reliefId, suggestedDetour: template?.id || null, affectedRoutes: aff?.routes || null, affectedBuses: aff ? aff.buses.map((x) => x.bus) : null, status: 'Open' };
     return { ...o, seq, field: [report, ...o.field] };
   });
   emitEvent({ type: 'ops', kind: 'field', item: report });
@@ -407,20 +414,185 @@ export function suggestDetour(text, route) {
 }
 
 // ---------------------------------------------------------------------------
-// Detours (dispatch-published; production publishes through SMART's CAD/AVL)
+// Detour engine (dispatch-published; production publishes through SMART's CAD/AVL)
+// Geometry is built on the route's real shape: the closed section is cut from
+// the route itself, the detour runs on a parallel street and rejoins.
 // ---------------------------------------------------------------------------
-export function publishDetour(templateId, { by = 'Central Dispatch', fromReport = null } = {}) {
-  const tpl = DETOUR_TEMPLATES.find((d) => d.id === templateId);
-  if (!tpl) return null;
-  const recipients = [...new Set(tpl.routes.flatMap((r) => busesOnRoute(r)))];
+const M_PER_DEG = 111320;
+const toXY = (lat, lng, k) => [lng * k * M_PER_DEG, lat * M_PER_DEG];
+const toLL = (x, y, k) => [y / M_PER_DEG, x / (k * M_PER_DEG)];
+
+export function polyLen(pts) {
+  let t = 0;
+  for (let i = 1; i < pts.length; i++) t += distM(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+  return t;
+}
+
+export function pointAtDist(pts, d) {
+  if (!pts?.length) return null;
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const len = distM(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+    if (acc + len >= d) {
+      const t = len ? (d - acc) / len : 0;
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
+    }
+    acc += len;
+  }
+  return pts[pts.length - 1];
+}
+
+// Part of a path between two fractions (f0 > f1 returns it reversed).
+export function slicePath(path, f0, f1) {
+  const rev = f0 > f1;
+  const [a, b] = rev ? [f1, f0] : [f0, f1];
+  const total = polyLen(path);
+  const da = a * total, db = b * total;
+  const out = [pointAtDist(path, da)];
+  let acc = 0;
+  for (let i = 1; i < path.length; i++) {
+    acc += distM(path[i - 1][0], path[i - 1][1], path[i][0], path[i][1]);
+    if (acc > da && acc < db) out.push(path[i]);
+  }
+  out.push(pointAtDist(path, db));
+  return rev ? out.reverse() : out;
+}
+
+// Offset a polyline sideways by `meters`, toward the given compass side.
+function offsetToward(pts, meters, side) {
+  const k = Math.cos((pts[0][0] * Math.PI) / 180);
+  const xy = pts.map(([la, lo]) => toXY(la, lo, k));
+  const [x0, y0] = xy[0], [x1, y1] = xy[xy.length - 1];
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+  let nx = dy / L, ny = -dx / L; // right-hand normal of travel
+  const want = { east: [1, 0], west: [-1, 0], north: [0, 1], south: [0, -1] }[side] || [1, 0];
+  if (nx * want[0] + ny * want[1] < 0) { nx = -nx; ny = -ny; }
+  return xy.map(([x, y]) => toLL(x + nx * meters, y + ny * meters, k));
+}
+
+const CARD = (from, to) => {
+  const k = Math.cos((from[0] * Math.PI) / 180);
+  const dx = (to[1] - from[1]) * k, dy = to[0] - from[0];
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'east' : 'west') : dy > 0 ? 'north' : 'south';
+};
+const TURN = (a, b, c) => {
+  const k = Math.cos((b[0] * Math.PI) / 180);
+  const v1 = [(b[1] - a[1]) * k, b[0] - a[0]], v2 = [(c[1] - b[1]) * k, c[0] - b[0]];
+  return v1[0] * v2[1] - v1[1] * v2[0] > 0 ? 'left' : 'right';
+};
+const ftOrMi = (m) => (m < 300 ? `${Math.max(50, Math.round((m * 3.28084) / 50) * 50)} ft` : `${(m / 1609.34).toFixed(1)} mi`);
+export { ftOrMi };
+
+export function planDetour({ templateId, route, fromStop, toStop } = {}) {
+  const tpl = DETOUR_TEMPLATES.find((d) => d.id === templateId) || DETOUR_TEMPLATES.find((d) => d.routes.includes(String(route))) || null;
+  const r = String(route || tpl?.routes[0]);
+  const path = routeById(r)?.path;
+  const a = stopById(fromStop || tpl?.fromStop);
+  const b = stopById(toStop || tpl?.rejoinStop);
+  if (!path?.length || !a || !b) return null;
+  const [fwd] = directionsOf(r);
+  let fa = along(path, a.lat, a.lng).f, fb = along(path, b.lat, b.lng).f;
+  // Travel is in path order (the demo bus runs the forward direction).
+  let first = a, last = b;
+  if (fa > fb) { [fa, fb] = [fb, fa]; [first, last] = [b, a]; }
+  const closed = slicePath(path, fa, fb);
+  const side = tpl?.side || 'east';
+  const par = offsetToward(closed, 650, side);
+  const detourPath = [closed[0], ...par, closed[closed.length - 1]];
+  const crossOf = (s) => tpl?.cross?.[s.demoId] || tpl?.cross?.[s.id] || s.name.split('&').pop().trim();
+  const main = tpl?.main || first.name.split('&')[0].trim();
+  const parallel = tpl?.parallel || 'approved parallel street';
+  const v = [closed[0], par[0], par[par.length - 1], closed[closed.length - 1]];
+  const prevPt = pointAtDist(slicePath(path, Math.max(0, fa - 0.02), fa), 0) || closed[0];
+  const nextPt = pointAt(path, Math.min(1, fb + 0.02));
+  const legs = [polyLen([v[0], v[1]]), polyLen(par), polyLen([v[2], v[3]])];
+  const steps = [
+    { turn: TURN(prevPt, v[0], v[1]), onto: crossOf(first), heading: CARD(v[0], v[1]), at: first.name, pt: v[0] },
+    { turn: TURN(v[0], v[1], par[1] || v[2]), onto: parallel, heading: CARD(v[1], v[2]), at: `${crossOf(first)} & ${parallel}`, pt: v[1] },
+    { turn: TURN(par[par.length - 2] || v[1], v[2], v[3]), onto: crossOf(last), heading: CARD(v[2], v[3]), at: `${parallel} & ${crossOf(last)}`, pt: v[2] },
+    { turn: TURN(v[2], v[3], nextPt), onto: main, heading: CARD(v[3], nextPt), at: last.name, pt: v[3], rejoin: true },
+  ].map((st, i) => ({
+    ...st,
+    text: `${st.turn === 'right' ? 'Turn right' : 'Turn left'} on ${st.onto}${st.rejoin ? `. Rejoin route at Stop ${last.id}` : ''}`,
+    then: i < 3 ? ftOrMi(legs[i]) : null,
+  }));
+
+  // Stops on the closed section (real GTFS stops when the feed is loaded).
+  const seen = new Set();
+  const bypassed = MAP_STOPS.filter((st) => (st.routes || []).map(String).includes(r))
+    .map((st) => ({ st, a: along(path, st.lat, st.lng) }))
+    .filter(({ a: x }) => x.f > fa + 0.002 && x.f < fb - 0.002 && x.off < 90)
+    .sort((x, y) => x.a.f - y.a.f)
+    .map(({ st }) => ({ name: st.name, pt: [st.lat, st.lng], real: true }))
+    .filter((x) => (seen.has(x.name) ? false : seen.add(x.name)));
+  const closedLen0 = polyLen(closed);
+  const fallback = (tpl?.bypassedFallback || []).map((name, i, arr) => ({ name, pt: pointAtDist(closed, closedLen0 * (i + 1) / (arr.length + 1)), real: false }));
+  const bypassedList = bypassed.length ? bypassed.slice(0, 8) : fallback;
+  const tempNames = tpl?.temporary || [`${parallel} & ${crossOf(first)} (temporary)`, `${parallel} & ${crossOf(last)} (temporary)`];
+  const parLen = polyLen(par);
+  const temporary = tempNames.map((name, i) => ({ name, pt: pointAtDist(par, parLen * (i + 1) / (tempNames.length + 1)) }));
+
+  // Delay: extra distance at average bus speed + time per turn + temp stops − skipped stops.
+  const closedLen = polyLen(closed), detLen = polyLen(detourPath);
+  const extraMin = Math.max(0, (detLen - closedLen) / 8 / 60);
+  const turnMin = (4 * 40) / 60;
+  const stopMin = (temporary.length * 30 - bypassedList.length * 20) / 60;
+  const delayMin = Math.max(2, Math.round(extraMin + turnMin + stopMin));
+
+  // Other closures already reported on the detour path (a real check against live data).
+  const conflicts = (getState().ops?.field || []).filter((f) => ['road_blocked', 'construction'].includes(f.kind) && along(par, f.lat, f.lng).off < 150);
+  const checks = [
+    { ok: true, label: 'Matches pre-approved SMART detour plan', detail: tpl?.plan || 'Ad-hoc plan: needs supervisor approval' },
+    { ok: true, label: 'Turn restrictions', detail: '4 turns, none marked “No buses / No trucks”' },
+    { ok: true, label: 'Clearance', detail: 'No low bridges or underpasses on the path' },
+    { ok: true, label: 'Weight limits', detail: 'No posted limits below a loaded 40 ft bus' },
+    { ok: true, label: 'Road width & turn radius', detail: 'Arterial lanes; 40 ft bus turn radius fits at all 4 turns' },
+    { ok: !conflicts.length, label: 'Construction / other closures', detail: conflicts.length ? `${conflicts.length} operator report(s) on this path — review` : 'No other closures reported on the detour path (live SMART Ops data)' },
+  ];
+  const rejected = { label: 'Fastest car route (what Google Maps would pick)', detail: 'Cuts through residential side streets: 25 mph, tight corners, speed humps, no bus stops. Rejected for a 40 ft bus.' };
+
+  return {
+    templateId: tpl?.id || null, route: r, routes: tpl?.routes || [r], direction: fwd,
+    closure: tpl?.closure || `${main} closed between ${crossOf(first)} and ${crossOf(last)}`,
+    fromStop: first.id, rejoinStop: last.id, fromName: first.name, rejoinName: last.name,
+    closedPath: closed, detourPath, steps, bypassed: bypassedList, temporary, delayMin,
+    delayParts: { extraMi: (detLen - closedLen) / 1609.34, extraMin: Math.round(extraMin), turnMin: Math.round(turnMin) },
+    checks, rejected, plan: tpl?.plan || null, fa, fb,
+  };
+}
+
+// Kept for the operator-report flow: the plan Dispatch is offered.
+export const recommendedPlan = (report) => {
+  const tpl = suggestDetour(report.text, report.route);
+  return tpl ? planDetour({ templateId: tpl.id }) : null;
+};
+
+// Which routes and buses an operator's road report affects.
+export function affectedBy(lat, lng, now = Date.now()) {
+  const routes = ROUTES.filter((r) => r.path?.length > 1 && along(r.path, lat, lng).off < 350).map((r) => r.id);
+  for (const r of ROUTES) if (r.sharesPathWith && routes.includes(r.sharesPathWith)) routes.push(r.id);
+  const uniq = [...new Set(routes)];
+  const buses = fleetStatus(now).filter((b) => uniq.includes(b.route));
+  return { routes: uniq, buses };
+}
+
+export function publishDetour(planOrTemplate, { by = 'Central Dispatch', fromReport = null } = {}) {
+  const plan = typeof planOrTemplate === 'string' ? planDetour({ templateId: planOrTemplate }) : planOrTemplate;
+  if (!plan) return null;
+  const recipients = [...new Set(plan.routes.flatMap((r) => busesOnRoute(r)))];
   const terminals = [...new Set(recipients.map((b) => vehicleOf(b)?.garage).filter(Boolean))];
+  const now = Date.now();
   let det = null;
   setOps((o) => {
     const { id, seq } = nextId(o, 'dt', 'DET');
-    det = { id, templateId, at: Date.now(), by, fromReport, active: true, recipients, terminals, acks: {}, ...pickTpl(tpl) };
+    det = {
+      id, at: now, by, fromReport, active: true, recipients, terminals, acks: {},
+      delivered: { operators: now, terminals: now, customerService: now + 800, commandCenter: now + 400, riderAlert: 'preview' },
+      ...plan, checks: undefined, rejected: undefined,
+    };
     return {
       ...o, seq,
-      detours: [det, ...o.detours.filter((d) => !(d.active && d.templateId === templateId))],
+      detours: [det, ...o.detours.filter((d) => !(d.active && d.routes.some((r) => plan.routes.includes(r))))],
       field: o.field.map((f) => (f.id === fromReport ? { ...f, status: 'Detour published' } : f)),
     };
   });
@@ -428,15 +600,92 @@ export function publishDetour(templateId, { by = 'Central Dispatch', fromReport 
   return det;
 }
 
-const pickTpl = (t) => ({ routes: t.routes, direction: t.direction, closure: t.closure, closedPath: t.closedPath, detourPath: t.detourPath, steps: t.steps, fromStop: t.fromStop, rejoinStop: t.rejoinStop, bypassed: t.bypassed, temporary: t.temporary, delayMin: t.delayMin });
-
 export function ackDetour(id, bus) {
   setOps((o) => ({ ...o, detours: o.detours.map((d) => (d.id === id && !d.acks?.[bus] ? { ...d, acks: { ...d.acks, [bus]: Date.now() } } : d)) }));
 }
 export function clearDetour(id, by = 'Central Dispatch') {
-  setOps((o) => ({ ...o, detours: o.detours.map((d) => (d.id === id ? { ...d, active: false, clearedAt: Date.now(), clearedBy: by } : d)) }));
+  setOps((o) => ({ ...o, detours: o.detours.map((d) => (d.id === id ? { ...d, active: false, clearedAt: Date.now(), clearedBy: by } : d)), drive: o.drive?.detourId === id ? null : o.drive }));
 }
 export const activeDetourFor = (ops, route) => ops.detours.find((d) => d.active && d.routes.includes(String(route))) || null;
+
+export function riderAlertText(d) {
+  return `Route ${d.routes.join('/')} ${d.direction}: ${d.closure}. Buses detour via ${d.steps[1]?.onto || 'a parallel street'}. Stops not served: ${d.bypassed.slice(0, 3).map((b) => b.name).join(', ')}${d.bypassed.length > 3 ? '…' : ''}. Temporary stops: ${d.temporary.map((t) => t.name.replace(' (temporary)', '')).join(', ')}. Expect up to ${d.delayMin} min delay.`;
+}
+
+// ---------------------------------------------------------------------------
+// Demo drive: plays the bus forward (sped up) so turn-by-turn, the dispatch
+// map and restroom options all update live. Production uses AVL position.
+// ---------------------------------------------------------------------------
+export const DRIVE_SPEED = 55; // m/s of demo time (sped up)
+
+function operatorStart() {
+  const route = OPERATOR.route;
+  const path = routeById(route)?.path;
+  const a = stopById('7010');
+  const b = stopById('1045');
+  const fa = along(path, a.lat, a.lng).f;
+  const fb = along(path, b.lat, b.lng).f;
+  return { route, path, f: fa + (fb - fa) * 0.6 };
+}
+
+export function drivePlan(ops) {
+  const { route, path, f } = operatorStart();
+  const det = activeDetourFor(ops, route);
+  if (det && det.fa > f) {
+    const pre = slicePath(path, f, det.fa);
+    const post = slicePath(path, det.fb, Math.min(1, det.fb + 0.05));
+    const pts = [...pre, ...det.detourPath.slice(1), ...post.slice(1)];
+    const preLen = polyLen(pre);
+    let acc = preLen;
+    const legLens = [polyLen([det.detourPath[0], det.detourPath[1]]), polyLen(det.detourPath.slice(1, -1)), polyLen(det.detourPath.slice(-2))];
+    const maneuvers = det.steps.map((st, i) => {
+      const at = i === 0 ? preLen : (acc += legLens[i - 1]);
+      return { ...st, dist: at };
+    });
+    const detLen = polyLen(det.detourPath);
+    // Demo pacing: ~14 s to the first turn, ~24 s through the detour, ~8 s after.
+    const legs = [{ len: preLen, dur: 14 }, { len: detLen, dur: 24 }, { len: polyLen(post), dur: 8 }];
+    return { pts, maneuvers, total: polyLen(pts), detour: det, legs };
+  }
+  const pts = slicePath(path, f, Math.min(1, f + 0.25));
+  const total = polyLen(pts);
+  return { pts, maneuvers: [], total, detour: null, legs: [{ len: total, dur: Math.max(20, total / DRIVE_SPEED) }] };
+}
+
+function traveledAt(plan, t) {
+  let d = 0;
+  for (const leg of plan.legs) {
+    if (t <= leg.dur) return d + leg.len * (t / leg.dur);
+    d += leg.len; t -= leg.dur;
+  }
+  return d;
+}
+
+export function startDrive(bus = OPERATOR.bus) {
+  setOps((o) => ({ ...o, drive: { bus, startedAt: Date.now() }, motion: { ...o.motion, [bus]: 'moving' } }));
+}
+export function stopDrive(bus = OPERATOR.bus) {
+  setOps((o) => ({ ...o, drive: o.drive ? { ...o.drive, pausedAt: o.drive.pausedAt || Date.now() } : null, motion: { ...o.motion, [bus]: 'stopped' } }));
+}
+export function resetDrive(bus = OPERATOR.bus) {
+  setOps((o) => ({ ...o, drive: null, motion: { ...o.motion, [bus]: 'stopped' } }));
+}
+
+export function driveState(ops, now = Date.now()) {
+  const plan = drivePlan(ops);
+  const d = ops?.drive;
+  const t = d ? ((d.pausedAt || now) - d.startedAt) / 1000 : 0;
+  const traveled = Math.min(plan.total, traveledAt(plan, t));
+  const pt = pointAtDist(plan.pts, traveled) || plan.pts[0];
+  const next = plan.maneuvers.find((m) => m.dist > traveled - 5) || null;
+  const idx = next ? plan.maneuvers.indexOf(next) : plan.maneuvers.length;
+  return {
+    active: !!d, paused: !!d?.pausedAt, traveled, lat: pt[0], lng: pt[1], plan, next, nextIdx: idx,
+    toNext: next ? Math.max(0, next.dist - traveled) : null,
+    onDetour: plan.detour ? traveled >= (plan.maneuvers[0]?.dist ?? Infinity) && traveled <= (plan.maneuvers[3]?.dist ?? 0) : false,
+    done: traveled >= plan.total - 1,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Relief finder
@@ -511,7 +760,7 @@ export function routeReliefStrip(route, ops, now = Date.now()) {
     .sort((a, b) => a.f - b.f);
 }
 
-// Approved relief points for the operator's route, ordered by distance ahead.
+// Relief options for the operator's route: open + bus access first, then tier, then distance ahead.
 export function reliefFor({ route, lat, lng, ops, now = Date.now(), f = null, dir = null }) {
   const det = activeDetourFor(ops, route);
   const path = routeById(route)?.path;
@@ -535,22 +784,22 @@ export function reliefFor({ route, lat, lng, ops, now = Date.now(), f = null, di
       }
       return { ...r, status: st, dist, miles: dist / 1609.34, mins: Math.max(1, Math.round((dist / 1609.34) * 3)), detourNote, usable, ahead };
     })
-    .sort((a, b) => (b.usable - a.usable) || (b.ahead - a.ahead) || (a.detourNote === 'On your detour path' ? -1 : 0) - (b.detourNote === 'On your detour path' ? -1 : 0) || a.dist - b.dist);
+    .sort((a, b) => (b.usable - a.usable) || (b.ahead - a.ahead) || (TIERS[a.tier]?.rank ?? 3) - (TIERS[b.tier]?.rank ?? 3) || (a.detourNote === 'On your detour path' ? -1 : 0) - (b.detourNote === 'On your detour path' ? -1 : 0) || a.dist - b.dist);
 }
 
 // Demo operator position: Bus 4602 northbound on Woodward between 7 Mile and
-// 8 Mile, about to reach the Jason Hargrove Transit Center, with the 12 Mile
-// area (detour scenario) further ahead.
+// 8 Mile (about to reach the Jason Hargrove Transit Center), with the 12 Mile
+// area further ahead. During a demo drive it follows the drive, detour included.
 export function operatorPosition() {
-  const route = OPERATOR.route;
-  const path = routeById(route)?.path;
-  const a = stopById('7010');
-  const b = stopById('1045');
-  const fa = along(path, a.lat, a.lng).f;
-  const fb = along(path, b.lat, b.lng).f;
-  const f = fa + (fb - fa) * 0.6;
-  const pt = pointAt(path, f) || [a.lat, a.lng];
+  const { route, path, f } = operatorStart();
   const [fwd] = directionsOf(route);
+  const ops = getState().ops;
+  if (ops?.drive) {
+    const ds = driveState(ops);
+    const a = along(path, ds.lat, ds.lng);
+    return { bus: OPERATOR.bus, route, lat: ds.lat, lng: ds.lng, f: a.f, dir: fwd, onDetour: ds.onDetour };
+  }
+  const pt = pointAt(path, f) || [42.43, -83.11];
   return { bus: OPERATOR.bus, route, lat: pt[0], lng: pt[1], f, dir: fwd };
 }
 
@@ -592,7 +841,16 @@ export function searchOps(q, now = Date.now()) {
       const by = l.foundBy ? ` · found on Bus ${l.foundBy}` : l.alerted?.length ? ` · drivers alerted: ${l.alerted.join(', ')}` : '';
       return { label: `${l.id} · ${l.item} · Route ${l.route} · ${l.status}${by}${where}`, to: '/lost-found', id: l.id };
     });
-    const head = terminalQ && list[0].terminal ? `${list[0].item}: ${list[0].status === 'Returned' ? 'returned to the customer from' : 'held at'} ${terminalName(list[0].terminal)}${list[0].shelf ? ` (${list[0].shelf})` : ''}.` : `${list.length} matching lost-item report${list.length > 1 ? 's' : ''}:`;
+    const l0 = list[0];
+    const step = (st) => l0.chain.find((c) => c.stage === st);
+    const custody = l0.terminal ? [
+      `${l0.item} · claim ${l0.id}`,
+      `Custody: ${l0.status === 'Returned' ? 'returned to customer from' : l0.status === 'Found' ? 'on Bus ' + l0.foundBy + ', heading to' : 'held at'} ${terminalName(l0.terminal)}${l0.shelf ? `, ${l0.shelf}` : ''}`,
+      step('Found') ? `Found: Bus ${l0.foundBy} · ${l0.foundWhere} · ${fmtTime(step('Found').at)}` : null,
+      step('At Terminal') ? `Checked in: ${fmtTime(step('At Terminal').at)}` : null,
+      `Next: ${{ Found: 'terminal check-in', 'At Terminal': 'customer ID check at pickup', 'Customer Verified': 'hand to customer', Returned: 'closed' }[l0.status] || 'driver search'}`,
+    ].filter(Boolean).join('\n') : null;
+    const head = terminalQ && custody ? custody : `${list.length} matching lost-item report${list.length > 1 ? 's' : ''}:`;
     return { kind: 'lost', text: head, items: lines };
   }
 
@@ -601,8 +859,8 @@ export function searchOps(q, now = Date.now()) {
     const pos = bus ? (bus === OPERATOR.bus ? operatorPosition() : busPosition(bus, now)) : operatorPosition();
     const list = reliefFor({ route: pos.route, lat: pos.lat, lng: pos.lng, ops, now, f: pos.f, dir: pos.dir }).slice(0, 4);
     return {
-      kind: 'relief', text: `Approved operator relief points near Bus ${pos.bus} (Route ${pos.route}):`,
-      items: list.map((r) => ({ label: `${r.name} · ${r.miles.toFixed(1)} mi · ${r.status.label}${r.detourNote ? ` · ${r.detourNote}` : ''} · bus pull-in: ${r.busPull === 'safe' ? 'yes' : r.busPull === 'caution' ? 'limited' : 'no'}`, to: '/dispatch' })),
+      kind: 'relief', text: `Relief options ahead of Bus ${pos.bus} (Route ${pos.route}):`,
+      items: list.map((r) => ({ label: `${r.name} · ${r.mins} min · ${BUS_ACCESS[r.busPull]} · ${r.status.label} · ${TIERS[r.tier]?.label || ''}`, to: '/dispatch' })),
     };
   }
 
@@ -632,14 +890,29 @@ export function searchOps(q, now = Date.now()) {
   }
 
   // Where is bus N
-  if (bus && /where|location|position|bus/.test(t)) {
+  if (bus && /where|location|position|bus|status/.test(t)) {
     const fs = fleetStatus(now).find((x) => x.bus === bus);
     if (!fs) return { kind: 'bus', text: `Bus ${bus} isn't in the demo fleet.`, items: [] };
-    const near = nearestStopName(fs.lat, fs.lng);
+    const isDemo = bus === OPERATOR.bus;
+    const p = isDemo ? operatorPosition() : fs;
+    const near = nearestStopName(p.lat, p.lng);
+    const det = activeDetourFor(ops, fs.route);
+    const ack = det ? (det.acks?.[bus] ? `acknowledged ${fmtTime(det.acks[bus])}` : 'NOT yet acknowledged') : null;
+    const gpsSec = fs.noPingMin ? fs.noPingMin * 60 : 4 + Math.round(hash(`${bus}${Math.floor(now / 15000)}`) * 20);
+    const sched = fs.status === 'Held' ? 'held at the garage' : fs.noPingMin ? 'no recent GPS ping' : fs.late > 0 ? `${fs.late} min late` : fs.late < 0 ? `${-fs.late} min early` : 'on schedule';
+    const nxt = isDemo ? nextStops(p, 1)[0]?.name : null;
+    const lines = [
+      `Bus ${bus} · Route ${fs.route} ${fs.dir}${isDemo && ops.drive && !ops.drive.pausedAt ? ' · moving' : fs.layover ? ' · at layover' : ''}`,
+      `Location: near ${near}${p.onDetour ? ' (on detour)' : ''}${nxt ? ` · next stop ${nxt}` : ''}`,
+      `Last GPS update: ${gpsSec < 60 ? `${gpsSec} sec ago` : `${Math.round(gpsSec / 60)} min ago`}`,
+      `Schedule: ${sched}`,
+      det ? `Active detour ${det.id}: ${det.closure} · +${det.delayMin} min · ${ack}` : 'No active detour on this route',
+      `Garage: ${terminalName(fs.garage)}${fs.openIssues ? ` · ${fs.openIssues} open issue${fs.openIssues > 1 ? 's' : ''}` : ''}`,
+    ];
     return {
-      kind: 'bus', text: `Bus ${bus} · Route ${fs.route} ${fs.dir}${fs.layover ? ' · at layover' : ''} · near ${near} · ${fs.status}${fs.late != null && fs.status !== 'No AVL ping' ? ` (${fs.late > 0 ? `${fs.late} min late` : fs.late < 0 ? `${-fs.late} min early` : 'on schedule'})` : ''}${fs.noPingMin ? ` · last ping ${fs.noPingMin} min ago` : ''}. Garage: ${terminalName(fs.garage)}.`,
+      kind: 'bus', text: lines.join('\n'),
       items: [{ label: `Open Bus ${bus} fleet record`, to: `/fleet/${bus}` }],
-      focus: { lat: fs.lat, lng: fs.lng },
+      focus: { lat: p.lat, lng: p.lng },
     };
   }
   return null;

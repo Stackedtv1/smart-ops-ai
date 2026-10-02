@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { onEvent, loadDemoScenario, resetDemo } from '../services/store.js';
 import { deptLabel } from '../lib/config.js';
@@ -144,6 +144,12 @@ export default function DashShell({ active, children, compact }) {
   }, [msg]);
 
   const cur = active || path;
+  const navRef = useRef(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const on = nav?.querySelector('a.on');
+    if (nav && on) nav.scrollLeft = Math.max(0, on.offsetLeft - nav.clientWidth / 2 + on.clientWidth / 2);
+  }, [cur]);
   const role = useRole();
   const tabs = TABS.filter((t) => allowedTab(role, t.match || t.to));
   const liveStatus = useStore((st) => st.liveStatus);
@@ -178,7 +184,7 @@ export default function DashShell({ active, children, compact }) {
           </div>
         </div>
         {(
-          <nav className="dash-nav" aria-label="Views">
+          <nav className="dash-nav" aria-label="Views" ref={navRef}>
             {tabs.map((t) => (
               <a key={t.to} href={`#${t.to}`} className={cur.startsWith(t.match || t.to) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
                 {t.label}

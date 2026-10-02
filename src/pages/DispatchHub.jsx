@@ -1,52 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
-import { useStore } from '../services/store.js';
+import { useStore, isOpen } from '../services/store.js';
 import { fmtTime, ago, startOfDay } from '../lib/time.js';
-import { stopById, ROUTES } from '../services/maps.js';
+import { ROUTES } from '../services/maps.js';
 import {
-  fleetStatus, DETOUR_TEMPLATES, publishDetour, clearDetour, sendMessage, ackMessage, ackProgress, TERMINALS, terminalName,
-  setFieldStatus, FIELD_KINDS, suggestDetour, RELIEF, reliefStatus,
+  fleetStatus, clearDetour, sendMessage, ackMessage, ackProgress, TERMINALS, terminalName,
+  setFieldStatus, FIELD_KINDS, RELIEF, reliefStatus, riderAlertText,
 } from '../services/ops.js';
+import DetourPlanner from '../components/DetourPlanner.jsx';
+import { deptLabel } from '../lib/config.js';
 import DashShell from '../components/DashShell.jsx';
 import OpsMap from '../components/OpsMap.jsx';
 import DispatchSearch from '../components/DispatchSearch.jsx';
 import { useNow } from '../components/TicketTable.jsx';
-import { Modal, RouteBadge } from '../components/ui.jsx';
+import { RouteBadge } from '../components/ui.jsx';
 import { StatCard } from '../components/Widgets.jsx';
 
 const LAYERS = [['buses', 'Buses'], ['field', 'Operator reports'], ['relief', 'Relief points'], ['terminals', 'Terminals']];
 const ROUTE_IDS = ROUTES.filter((r) => r.path?.length > 1 || r.sharesPathWith).map((r) => r.id);
-
-export function DetourReview({ tpl, fromReport, onClose }) {
-  const recipients = [...new Set(tpl.routes)];
-  return (
-    <Modal
-      title={`Review detour · Routes ${tpl.routes.join('/')}`}
-      onClose={onClose}
-      footer={<>
-        <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => { publishDetour(tpl.id, { fromReport }); onClose(); }}>Publish detour</button>
-      </>}
-    >
-      <div className="notice notice-warn"><b>{tpl.closure}</b> · {tpl.direction}</div>
-      <OpsMap routes={recipients} detours={[tpl]} fit={[...tpl.detourPath, ...tpl.closedPath]} height={240} label="Detour preview" />
-      <div className="split2">
-        <div>
-          <div className="eyebrow">Recommended routing</div>
-          <ol className="detour-steps light">
-            {tpl.steps.map((s, i) => <li key={i}><b>{s.text}</b><span>{s.at}</span></li>)}
-          </ol>
-        </div>
-        <div className="stack-sm">
-          <div><div className="eyebrow">Stops bypassed ({tpl.bypassed.length})</div>{tpl.bypassed.map((b) => <div key={b} className="small">✕ {b}</div>)}</div>
-          <div><div className="eyebrow">Temporary stops ({tpl.temporary.length})</div>{tpl.temporary.map((b) => <div key={b} className="small">+ {b}</div>)}</div>
-          <div className="small">Rejoin at <b>Stop {stopById(tpl.rejoinStop)?.id} · {stopById(tpl.rejoinStop)?.name}</b> · est. delay <b>{tpl.delayMin} min</b></div>
-        </div>
-      </div>
-      <div className="small muted">Publishing sends the same detour to every affected operator, their terminals, Customer Service and the Command Center. Rider-facing alerts are Phase 2. In production the detour also goes to SMART's CAD/AVL so onboard systems stay in sync. Bypassed and temporary stops shown are simulated.</div>
-    </Modal>
-  );
-}
 
 export default function DispatchHub() {
   const { go } = useNav();
@@ -54,7 +25,8 @@ export default function DispatchHub() {
   const now = useNow(10000);
   const fleet = useMemo(() => fleetStatus(now), [now, ops]); // eslint-disable-line react-hooks/exhaustive-deps
   const [layers, setLayers] = useState({ buses: true, field: true, relief: false, terminals: true });
-  const [review, setReview] = useState(null);
+  const [planner, setPlanner] = useState(null);
+  const tickets = useStore((s) => s.tickets);
   const [to, setTo] = useState({ kind: 'all' });
   const [text, setText] = useState('');
   const [prio, setPrio] = useState('normal');
@@ -81,6 +53,30 @@ export default function DispatchHub() {
     setNote(`${m.id} sent to ${m.to.label} · waiting on ${m.recipients.length} acknowledgement${m.recipients.length > 1 ? 's' : ''}.`);
   }
 
+  // Needs attention now: the few things a dispatcher should act on, each with the recommended action.
+  const attn = [];
+  field.filter((f) => f.kind === 'road_blocked' && f.status === 'Open').forEach((f) => attn.push({
+    id: f.id, level: 'critical', title: `Road closure reported · Bus ${f.bus}`,
+    why: `“${f.text}”${f.affectedRoutes?.length ? ` · Guardian: affects Route${f.affectedRoutes.length > 1 ? 's' : ''} ${f.affectedRoutes.join(', ')}` : ''}`,
+    action: 'Plan detour', run: () => setPlanner({ report: f }),
+  }));
+  inbox.filter((m) => !m.acks?.DISPATCH && m.priority === 'emergency').forEach((m) => attn.push({
+    id: m.id, level: 'critical', title: `Operator emergency · ${m.from}`, why: m.text, action: 'Acknowledge', run: () => ackMessage(m.id, 'DISPATCH', 'Central Dispatch'),
+  }));
+  activeDetours.forEach((d) => {
+    const pend = d.recipients.filter((b) => !d.acks?.[b]);
+    if (pend.length) attn.push({ id: d.id, level: 'warn', title: `Detour ${d.id}: ${pend.length} operator${pend.length > 1 ? 's' : ''} haven't acknowledged`, why: `Waiting on Bus ${pend.join(', ')}`, action: 'Resend to them', run: () => sendMessage({ to: pend.length === 1 ? { kind: 'bus', id: pend[0] } : { kind: 'route', id: d.routes[0] }, priority: 'high', text: `DETOUR ACTIVE: ${d.closure}. Open SMART Ops and acknowledge.` }) });
+  });
+  tickets.filter((t) => isOpen(t) && t.priority === 'high' && (t.ai.category === 'vehicle_defect' || t.ai.category === 'safety') && !t.assignee).slice(0, 2).forEach((t) => attn.push({
+    id: t.id, level: t.ai.category === 'safety' ? 'critical' : 'warn', title: `${t.ai.category === 'safety' ? 'Safety' : 'Vehicle'}: ${t.vehicle ? `Bus ${t.vehicle} · ` : ''}${t.ai.title}`, why: `High priority, no one assigned · routed to ${deptLabel(t.department)}`, action: 'Open ticket', run: () => go(`/ticket/${t.id}`),
+  }));
+  inbox.filter((m) => !m.acks?.DISPATCH && m.priority !== 'emergency').slice(0, 2).forEach((m) => attn.push({
+    id: m.id, level: 'info', title: `Request from ${m.from}`, why: m.text, action: 'Acknowledge', run: () => ackMessage(m.id, 'DISPATCH', 'Central Dispatch'),
+  }));
+  sent.filter((m) => ackProgress(m).pending.length && now - m.at > 30 * 60000).slice(0, 1).forEach((m) => attn.push({
+    id: `ack-${m.id}`, level: 'info', title: `${ackProgress(m).pending.length} buses never acknowledged ${m.id}`, why: m.text, action: 'Resend', run: () => sendMessage({ to: { kind: 'all' }, text: m.text }),
+  }));
+
   const sortedField = [...field].sort((a, b) => (a.status === 'Open' ? 0 : 1) - (b.status === 'Open' ? 0 : 1) || (a.kind === 'road_blocked' ? -1 : 0) - (b.kind === 'road_blocked' ? -1 : 0) || b.at - a.at);
 
   return (
@@ -92,6 +88,23 @@ export default function DispatchHub() {
         </div>
         <span className="demo-data">Simulated positions</span>
       </div>
+
+      <section className="panel">
+        <div className="panel-h"><h2>Needs attention now</h2><span className="tag">{attn.length}</span></div>
+        <div className="panel-b attn">
+          {attn.length === 0 && <div className="small muted">Nothing needs a dispatcher right now.</div>}
+          {attn.slice(0, 6).map((a) => (
+            <div key={a.id} className={`attn-item ${a.level}`}>
+              <span className="bar" />
+              <span style={{ minWidth: 0 }}><span className="t" style={{ display: 'block' }}>{a.title}</span><span className="w">{a.why}</span></span>
+              <button className={`btn btn-sm ${a.level === 'critical' ? 'btn-primary' : ''}`} onClick={a.run}>{a.action}</button>
+            </div>
+          ))}
+          <div className="row wrap" style={{ gap: 8 }}>
+            <button className="btn btn-sm" onClick={() => setPlanner({ report: null })}>+ Road closure called in · plan a detour</button>
+          </div>
+        </div>
+      </section>
 
       <DispatchSearch onFocus={setFocus} />
 
@@ -129,7 +142,7 @@ export default function DispatchHub() {
           <div className="panel-b stack-sm" style={{ maxHeight: 520, overflow: 'auto' }}>
             {sortedField.length === 0 && <div className="small muted">No operator location reports today.</div>}
             {sortedField.map((f) => {
-              const tpl = f.kind === 'road_blocked' ? DETOUR_TEMPLATES.find((d) => d.id === f.suggestedDetour) || suggestDetour(f.text, f.route) : null;
+              const canPlan = f.kind === 'road_blocked';
               const published = activeDetours.some((d) => d.fromReport === f.id);
               return (
                 <div key={f.id} className={`fr fr-${f.sev} ${f.status === 'Open' ? 'fresh' : ''}`}>
@@ -141,7 +154,7 @@ export default function DispatchHub() {
                   <div className="xs muted">AI routed to {f.routedTo} · {Math.round((f.confidence || 0.9) * 100)}% confidence · {f.status}</div>
                   <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
                     <button className="btn btn-sm" onClick={() => setFocus({ lat: f.lat, lng: f.lng })}>Locate</button>
-                    {tpl && !published && f.status !== 'Detour published' && <button className="btn btn-sm btn-primary" onClick={() => setReview({ tpl, fromReport: f.id })}>Review recommended detour</button>}
+                    {canPlan && !published && f.status !== 'Detour published' && <button className="btn btn-sm btn-primary" onClick={() => setPlanner({ report: f })}>Plan detour</button>}
                     {published && <span className="tag" style={{ background: 'var(--flag)', color: 'var(--flag-ink)' }}>Detour published</span>}
                     {f.status === 'Open' && <button className="btn btn-sm" onClick={() => setFieldStatus(f.id, 'Reviewed')}>Mark reviewed</button>}
                     {f.status === 'Open' && <button className="btn btn-sm" onClick={() => { sendMessage({ to: { kind: 'route', id: f.route }, text: `Heads up: ${FIELD_KINDS[f.kind]?.label.toLowerCase()} reported by Bus ${f.bus}. “${f.text}”` }); setFieldStatus(f.id, 'Route alerted'); }}>Alert route</button>}
@@ -199,8 +212,8 @@ export default function DispatchHub() {
             <div className="panel-b stack-sm">
               {activeDetours.length === 0 && (
                 <>
-                  <div className="small muted">No active detours. Approve one from an operator road report, or publish a planned detour:</div>
-                  <div className="row wrap" style={{ gap: 6 }}>{DETOUR_TEMPLATES.map((t) => <button key={t.id} className="btn btn-sm" onClick={() => setReview({ tpl: t, fromReport: null })}>{t.closure}</button>)}</div>
+                  <div className="small muted">No active detours.</div>
+                  <button className="btn btn-sm" onClick={() => setPlanner({ report: null })}>Plan a detour</button>
                 </>
               )}
               {activeDetours.map((d) => {
@@ -210,8 +223,10 @@ export default function DispatchHub() {
                     <div className="detour-h"><span className="detour-tag">DETOUR ACTIVE</span><span className="mono xs">{d.id} · {ago(d.at, now)}</span></div>
                     <div className="detour-t">Routes {d.routes.join('/')} {d.direction}</div>
                     <div className="detour-why">{d.closure}</div>
+                    <div className="detour-meta"><span><b>{d.bypassed.length}</b> stops bypassed</span><span><b>{d.temporary.length}</b> temporary</span><span><b>+{d.delayMin} min</b></span></div>
                     <div className="ackbar"><span style={{ width: `${(a / Math.max(1, d.recipients.length)) * 100}%` }} /></div>
                     <div className="xs">{a}/{d.recipients.length} operators acknowledged · terminals notified: {d.terminals.map(terminalName).join(', ')}</div>
+                    <details style={{ marginTop: 4 }}><summary className="xs" style={{ cursor: 'pointer', fontWeight: 700 }}>Rider alert preview</summary><div className="rider-alert" style={{ color: 'var(--ink)', marginTop: 6 }}>{riderAlertText(d)}</div></details>
                     <button className="btn btn-sm" style={{ marginTop: 6 }} onClick={() => clearDetour(d.id)}>Clear detour · restore normal route</button>
                   </div>
                 );
@@ -261,7 +276,7 @@ export default function DispatchHub() {
         </div>
       </section>
 
-      {review && <DetourReview tpl={review.tpl} fromReport={review.fromReport} onClose={() => setReview(null)} />}
+      {planner && <DetourPlanner report={planner.report} onClose={() => setPlanner(null)} />}
     </DashShell>
   );
 }

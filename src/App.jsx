@@ -18,7 +18,9 @@ import Safety from './pages/Safety.jsx';
 import Analytics from './pages/Analytics.jsx';
 import ROI, { ROICalculator } from './pages/ROI.jsx';
 import { DemoFlag } from './components/ui.jsx';
-import { OperatorRelief, OperatorNavigate, OperatorLost, OperatorDispatch, OperatorField } from './pages/OperatorTools.jsx';
+import { OperatorRelief, OperatorLost, OperatorDispatch, OperatorField } from './pages/OperatorTools.jsx';
+import OperatorNavigate from './pages/OperatorNavigate.jsx';
+import OperatorReport from './pages/OperatorReport.jsx';
 import DispatchHub from './pages/DispatchHub.jsx';
 import Terminal from './pages/Terminal.jsx';
 import LostFound from './pages/LostFound.jsx';
@@ -34,6 +36,7 @@ export function Screen({ compact }) {
   if (path === '/operator/pretrip') return <PreTrip />;
   if (path === '/operator/reports') return <MyReports />;
   if (path === '/operator/relief') return <OperatorRelief />;
+  if (path === '/operator/report') return <OperatorReport />;
   if (path.startsWith('/operator/navigate')) return <OperatorNavigate key={path} to={qs(path).get('to')} />;
   if (path === '/operator/lost') return <OperatorLost />;
   if (path === '/operator/dispatch') return <OperatorDispatch />;

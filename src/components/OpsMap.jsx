@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ROUTES, MILE_ROADS, BOUNDS, project, routeById } from '../services/maps.js';
 import { RELIEF, TERMINALS } from '../services/ops.js';
 
-// Operations map: routes, live (simulated) bus positions, approved relief
+// Operations map: routes, live (simulated) bus positions, relief
 // points, operator field reports and dispatch detours (normal route vs detour).
 // Pure SVG so it works offline on bad venue Wi-Fi.
 
@@ -13,7 +13,7 @@ const toPts = (path) => path.map(([la, lo]) => project(la, lo).join(',')).join('
 
 export default function OpsMap({
   routes = null, buses = [], relief = null, field = [], detours = [], you = null, fit = null, height = 360,
-  showTerminals = false, onPick, label, legend = true,
+  showTerminals = false, onPick, label, legend = true, trail = null, heading = null,
 }) {
   const wrap = useRef(null);
   const [w, setW] = useState(600);
@@ -71,21 +71,43 @@ export default function OpsMap({
           <polyline key={`bg-${r.id}`} points={toPts(r.path)} fill="none" stroke="var(--map-road)" strokeWidth={px(2)} strokeLinejoin="round" />
         ))}
         {shown.map((r) => (
-          <polyline key={r.id} points={toPts(r.path)} fill="none" stroke={r.color} strokeOpacity=".75" strokeWidth={px(4)} strokeLinejoin="round" strokeLinecap="round" />
+          <polyline key={r.id} points={toPts(r.path)} fill="none" stroke={detours.length ? '#8796ab' : r.color} strokeOpacity=".8" strokeWidth={px(detours.length ? 5 : 4)} strokeLinejoin="round" strokeLinecap="round" />
         ))}
+        {trail && trail.length > 1 && <polyline points={toPts(trail)} fill="none" stroke="#0a84ff" strokeOpacity=".35" strokeWidth={px(7)} strokeLinecap="round" strokeLinejoin="round" />}
 
         {detours.map((d) => (
-          <g key={d.id}>
-            <polyline points={toPts(d.closedPath)} fill="none" stroke="var(--high)" strokeWidth={px(5)} strokeDasharray={`${px(6)} ${px(5)}`} strokeLinecap="round" />
-            <polyline points={toPts(d.detourPath)} fill="none" stroke="var(--flag)" strokeWidth={px(6)} strokeLinejoin="round" strokeLinecap="round" />
-            <polyline points={toPts(d.detourPath)} fill="none" stroke="#1c1600" strokeWidth={px(1.2)} strokeDasharray={`${px(2)} ${px(6)}`} />
+          <g key={d.id || d.templateId || 'plan'}>
+            {/* blocked section */}
+            <polyline points={toPts(d.closedPath)} fill="none" stroke="#fff" strokeWidth={px(9)} strokeLinecap="round" opacity=".8" />
+            <polyline points={toPts(d.closedPath)} fill="none" stroke="#e01e1e" strokeWidth={px(6)} strokeDasharray={`${px(7)} ${px(5)}`} strokeLinecap="round" />
+            {/* new bus route */}
+            <polyline points={toPts(d.detourPath)} fill="none" stroke="#fff" strokeWidth={px(11)} strokeLinejoin="round" strokeLinecap="round" />
+            <polyline points={toPts(d.detourPath)} fill="none" stroke="#0a84ff" strokeWidth={px(7)} strokeLinejoin="round" strokeLinecap="round" />
+            {(d.bypassed || []).filter((b) => b.pt).map((b) => {
+              const [x, y] = project(b.pt[0], b.pt[1]);
+              return (
+                <g key={b.name} transform={`translate(${x},${y})`}>
+                  <circle r={px(6.5)} fill="#e01e1e" stroke="#fff" strokeWidth={px(1.6)} />
+                  <path d={`M${-px(2.6)} ${-px(2.6)} L${px(2.6)} ${px(2.6)} M${px(2.6)} ${-px(2.6)} L${-px(2.6)} ${px(2.6)}`} stroke="#fff" strokeWidth={px(1.6)} />
+                </g>
+              );
+            })}
+            {(d.temporary || []).filter((t) => t.pt).map((t) => {
+              const [x, y] = project(t.pt[0], t.pt[1]);
+              return (
+                <g key={t.name} transform={`translate(${x},${y})`}>
+                  <rect x={-px(8)} y={-px(8)} width={px(16)} height={px(16)} rx={px(3)} fill="#f2b705" stroke="#1c1600" strokeWidth={px(1.5)} />
+                  <text y={px(4)} textAnchor="middle" fontSize={px(10)} fontWeight="900" fill="#1c1600">T</text>
+                </g>
+              );
+            })}
             {(() => {
               const mid = d.closedPath[Math.floor(d.closedPath.length / 2)];
               const [x, y] = project(mid[0], mid[1]);
               return (
-                <g transform={`translate(${x},${y})`}>
-                  <circle r={px(9)} fill="var(--high)" stroke="#fff" strokeWidth={px(2)} />
-                  <path d={`M${-px(4)} ${-px(4)} L${px(4)} ${px(4)} M${px(4)} ${-px(4)} L${-px(4)} ${px(4)}`} stroke="#fff" strokeWidth={px(2.2)} />
+                <g transform={`translate(${x + px(16)},${y})`}>
+                  <rect x={-px(30)} y={-px(9)} width={px(60)} height={px(18)} rx={px(4)} fill="#e01e1e" />
+                  <text y={px(4)} textAnchor="middle" fontSize={px(10)} fontWeight="900" fill="#fff">CLOSED</text>
                 </g>
               );
             })()}
@@ -155,11 +177,14 @@ export default function OpsMap({
         </div>
       )}
       {legend && <div className="opsmap-legend xs">
-        <span><i style={{ background: 'var(--ok)' }} />Bus on time</span>
-        <span><i style={{ background: 'var(--med)' }} />Late</span>
-        <span><i className="tri" />Operator report</span>
+        {buses.length > 0 && <span><i style={{ background: 'var(--ok)' }} />Bus on time</span>}
+        {buses.length > 0 && <span><i style={{ background: 'var(--med)' }} />Late</span>}
+        {field.length > 0 && <span><i className="tri" />Operator report</span>}
         {reliefPts.length > 0 && <span><i style={{ background: 'var(--ok)', borderRadius: 99 }} />Relief point</span>}
-        {detours.length > 0 && <span><i style={{ background: 'var(--flag)' }} />Detour</span>}
+        {detours.length > 0 && <span><i style={{ background: '#8796ab' }} />Normal route</span>}
+        {detours.length > 0 && <span><i style={{ background: '#e01e1e' }} />Closed</span>}
+        {detours.length > 0 && <span><i style={{ background: '#0a84ff' }} />Detour</span>}
+        {detours.some((d) => d.temporary?.length) && <span><i style={{ background: '#f2b705' }} />Temp stop</span>}
       </div>}
     </div>
   );

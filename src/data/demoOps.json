@@ -88,7 +88,8 @@
       "accessible": true,
       "agreement": "DDOT facility · SMART access to confirm",
       "source": "https://www.bridgedetroit.com/detroits-new-transit-center-at-old-state-fairgrounds-opens-saturday/",
-      "sourceLabel": "BridgeDetroit; City of Detroit"
+      "sourceLabel": "BridgeDetroit; City of Detroit",
+      "tier": "partner"
     },
     {
       "id": "R-DPL",
@@ -139,7 +140,8 @@
       "accessible": true,
       "agreement": "Public building · relief agreement needed",
       "source": "https://detroitpubliclibrary.org/locations/main",
-      "sourceLabel": "Detroit Public Library"
+      "sourceLabel": "Detroit Public Library",
+      "tier": "public"
     },
     {
       "id": "R-FADL",
@@ -190,7 +192,8 @@
       "accessible": true,
       "agreement": "Public building · relief agreement needed",
       "source": "https://www.fadl.org/",
-      "sourceLabel": "Ferndale Area District Library"
+      "sourceLabel": "Ferndale Area District Library",
+      "tier": "public"
     },
     {
       "id": "R-ROTC",
@@ -212,7 +215,8 @@
       "verifyRestroom": true,
       "agreement": "SMART facility · confirm restroom",
       "source": "https://en.wikipedia.org/wiki/Royal_Oak_station_(Michigan)",
-      "sourceLabel": "Public station records"
+      "sourceLabel": "Public station records",
+      "tier": "partner"
     },
     {
       "id": "R-ROPL",
@@ -260,7 +264,8 @@
       "accessible": true,
       "agreement": "Public building · relief agreement needed",
       "source": "https://oaklandcounty115.com/2022/01/13/royal-oak-library-announces-new-hours/",
-      "sourceLabel": "Oakland County Times (hours may have changed)"
+      "sourceLabel": "Oakland County Times (hours may have changed)",
+      "tier": "public"
     },
     {
       "id": "R-BPL",
@@ -293,7 +298,8 @@
       "accessible": true,
       "agreement": "Public building · relief agreement needed",
       "source": "https://www.baldwinlib.org/",
-      "sourceLabel": "Baldwin Public Library"
+      "sourceLabel": "Baldwin Public Library",
+      "tier": "public"
     },
     {
       "id": "R-TPL",
@@ -344,7 +350,8 @@
       "accessible": true,
       "agreement": "Public building · relief agreement needed",
       "source": "https://troypl.org/",
-      "sourceLabel": "Troy Public Library"
+      "sourceLabel": "Troy Public Library",
+      "tier": "public"
     },
     {
       "id": "R-500-A",
@@ -361,12 +368,13 @@
       "busPull": "caution",
       "busPullNote": "Rear lot, enter from 7 Mile only",
       "access": "Restroom near pharmacy counter",
-      "accessible": true
+      "accessible": true,
+      "tier": "partner"
     },
     {
       "id": "R-500-B",
       "name": "Bel Air Center Layover Room",
-      "type": "SMART layover facility",
+      "type": "SMART layover facility (demo)",
       "lat": 42.4465,
       "lng": -83.022,
       "routes": [
@@ -378,7 +386,8 @@
       "busPull": "safe",
       "busPullNote": "Layover bays 3–5",
       "access": "Keypad entry. Code from Dispatch.",
-      "accessible": true
+      "accessible": true,
+      "tier": "smart"
     },
     {
       "id": "R-510-A",
@@ -395,7 +404,8 @@
       "busPull": "safe",
       "busPullNote": "Bus-length spot on north side of lot",
       "access": "No purchase needed, show SMART ID",
-      "accessible": true
+      "accessible": true,
+      "tier": "partner"
     },
     {
       "id": "R-494-A",
@@ -411,12 +421,13 @@
       "busPull": "caution",
       "busPullNote": "Never block apparatus bay. Use street side.",
       "access": "Ring bell at side door",
-      "accessible": true
+      "accessible": true,
+      "tier": "partner"
     },
     {
       "id": "R-261-A",
       "name": "Michigan & Telegraph Layover Room",
-      "type": "SMART layover facility",
+      "type": "SMART layover facility (demo)",
       "lat": 42.3005,
       "lng": -83.2775,
       "routes": [
@@ -427,7 +438,8 @@
       "busPull": "safe",
       "busPullNote": "Layover lane",
       "access": "Keypad entry. Code from Dispatch.",
-      "accessible": true
+      "accessible": true,
+      "tier": "smart"
     },
     {
       "id": "R-250-A",
@@ -444,7 +456,8 @@
       "busPull": "safe",
       "busPullNote": "Far east edge of lot",
       "access": "Restroom at back of store",
-      "accessible": true
+      "accessible": true,
+      "tier": "partner"
     }
   ],
   "detourTemplates": [
@@ -454,149 +467,61 @@
         "461",
         "462"
       ],
-      "direction": "Northbound",
       "match": [
         "woodward",
         "12 mile",
         "twelve mile",
         "13 mile"
       ],
-      "closure": "Woodward closed northbound between 12 Mile and 13 Mile",
-      "closedPath": [
-        [
-          42.505,
-          -83.179
-        ],
-        [
-          42.512,
-          -83.1885
-        ],
-        [
-          42.519,
-          -83.198
-        ]
-      ],
-      "detourPath": [
-        [
-          42.505,
-          -83.179
-        ],
-        [
-          42.505,
-          -83.17
-        ],
-        [
-          42.519,
-          -83.17
-        ],
-        [
-          42.519,
-          -83.198
-        ]
-      ],
-      "steps": [
-        {
-          "text": "Turn right (east) on 12 Mile",
-          "at": "Woodward & 12 Mile"
-        },
-        {
-          "text": "Left (north) on Main St",
-          "at": "12 Mile & Main St"
-        },
-        {
-          "text": "Left (west) on 13 Mile",
-          "at": "Main St & 13 Mile"
-        },
-        {
-          "text": "Right on Woodward. Rejoin route at Stop 1301",
-          "at": "Woodward & 13 Mile"
-        }
-      ],
+      "closure": "Woodward closed between 12 Mile and 13 Mile",
       "fromStop": "1204",
       "rejoinStop": "1301",
-      "bypassed": [
-        "Woodward & Lincoln (NB)",
-        "Woodward & 11th St (NB)",
-        "Woodward & Catalpa (NB)"
-      ],
       "temporary": [
         "Main St & 12 Mile (temporary)",
         "Main St & 13 Mile (temporary)"
       ],
-      "delayMin": 7
+      "side": "east",
+      "main": "Woodward",
+      "parallel": "Main St",
+      "cross": {
+        "1204": "12 Mile",
+        "1301": "13 Mile"
+      },
+      "plan": "D-461-12 (demo library)",
+      "bypassedFallback": [
+        "Woodward & Lincoln",
+        "Woodward & 11th St",
+        "Woodward & Catalpa"
+      ]
     },
     {
       "id": "DT-510-12M",
       "routes": [
         "510"
       ],
-      "direction": "Northbound",
       "match": [
         "van dyke",
         "12 mile",
         "twelve mile"
       ],
-      "closure": "Van Dyke closed northbound at 12 Mile (water main)",
-      "closedPath": [
-        [
-          42.504,
-          -83.027
-        ],
-        [
-          42.519,
-          -83.0275
-        ],
-        [
-          42.534,
-          -83.028
-        ]
-      ],
-      "detourPath": [
-        [
-          42.504,
-          -83.027
-        ],
-        [
-          42.504,
-          -83.042
-        ],
-        [
-          42.534,
-          -83.042
-        ],
-        [
-          42.534,
-          -83.028
-        ]
-      ],
-      "steps": [
-        {
-          "text": "Turn left (west) on 12 Mile",
-          "at": "Van Dyke & 12 Mile"
-        },
-        {
-          "text": "Right (north) on Ryan Rd",
-          "at": "12 Mile & Ryan"
-        },
-        {
-          "text": "Right (east) on 14 Mile",
-          "at": "Ryan & 14 Mile"
-        },
-        {
-          "text": "Left on Van Dyke. Rejoin route at Stop 940",
-          "at": "Van Dyke & 14 Mile"
-        }
-      ],
+      "closure": "Van Dyke closed between 12 Mile and 14 Mile (water main)",
       "fromStop": "918",
       "rejoinStop": "940",
-      "bypassed": [
-        "Van Dyke & Martin (NB)",
-        "Van Dyke & 13 Mile (NB)"
-      ],
       "temporary": [
         "Ryan & 13 Mile (temporary)"
       ],
-      "delayMin": 6
+      "side": "west",
+      "main": "Van Dyke",
+      "parallel": "Ryan Rd",
+      "cross": {
+        "918": "12 Mile",
+        "940": "14 Mile"
+      },
+      "plan": "D-510-12 (demo library)",
+      "bypassedFallback": [
+        "Van Dyke & Martin",
+        "Van Dyke & 13 Mile"
+      ]
     }
   ]
 }
