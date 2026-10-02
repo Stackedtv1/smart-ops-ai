@@ -18,6 +18,12 @@ import Safety from './pages/Safety.jsx';
 import Analytics from './pages/Analytics.jsx';
 import ROI, { ROICalculator } from './pages/ROI.jsx';
 import { DemoFlag } from './components/ui.jsx';
+import { OperatorRelief, OperatorNavigate, OperatorLost, OperatorDispatch, OperatorField } from './pages/OperatorTools.jsx';
+import DispatchHub from './pages/DispatchHub.jsx';
+import Terminal from './pages/Terminal.jsx';
+import LostFound from './pages/LostFound.jsx';
+
+const qs = (path) => new URLSearchParams(path.split('?')[1] || '');
 
 export function Screen({ compact }) {
   const { path } = useNav();
@@ -27,6 +33,15 @@ export function Screen({ compact }) {
   if ((m = match('/operator/result/:id', path))) return <AIResult key={path} id={m.id} />;
   if (path === '/operator/pretrip') return <PreTrip />;
   if (path === '/operator/reports') return <MyReports />;
+  if (path === '/operator/relief') return <OperatorRelief />;
+  if (path.startsWith('/operator/navigate')) return <OperatorNavigate key={path} to={qs(path).get('to')} />;
+  if (path === '/operator/lost') return <OperatorLost />;
+  if (path === '/operator/dispatch') return <OperatorDispatch />;
+  if (path.startsWith('/operator/field')) return <OperatorField key={path} kind={qs(path).get('kind')} relief={qs(path).get('relief')} />;
+  if (path === '/dispatch') return <DispatchHub />;
+  if (path === '/terminal') return <Terminal />;
+  if ((m = match('/terminal/:id', path))) return <Terminal key={path} id={m.id} />;
+  if (path === '/lost-found') return <LostFound />;
   if (path === '/dashboard') return <Dashboard compact={compact} />;
   if ((m = match('/ticket/:id', path))) return <TicketDetail key={path} id={m.id} />;
   if (path === '/maintenance') return <Maintenance />;

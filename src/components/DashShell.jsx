@@ -5,9 +5,14 @@ import { deptLabel } from '../lib/config.js';
 import { durationLabel } from '../lib/time.js';
 import { DemoFlag, Modal } from './ui.jsx';
 import { useStore } from '../services/store.js';
+import { useRole, setRole, allowedTab, ROLE_LABEL } from '../lib/role.js';
+import { FIELD_KINDS, terminalName } from '../services/ops.js';
 
 const TABS = [
+  { to: '/dispatch', label: 'Dispatch Hub' },
   { to: '/dashboard', label: 'Command' },
+  { to: '/terminal/oakland', match: '/terminal', label: 'Terminals' },
+  { to: '/lost-found', label: 'Lost & Found' },
   { to: '/maintenance', label: 'Maintenance' },
   { to: '/facilities', label: 'Facilities' },
   { to: '/safety', label: 'Safety' },
@@ -41,6 +46,14 @@ export function Toasts() {
           setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 8000);
           return;
         }
+        if (ev.type === 'ops') {
+          const o = opsToast(ev);
+          if (!o) return;
+          const item = { id: `op-${Math.random().toString(36).slice(2)}`, ops: o };
+          setItems((xs) => [...xs.slice(-2), item]);
+          setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== item.id)), 8000);
+          return;
+        }
         if (ev.type === 'resolved') {
           const item = { id: `rs-${ev.ticket.id}`, resolved: ev.ticket };
           setItems((xs) => [...xs.filter((x) => x.id !== item.id).slice(-2), item]);
@@ -57,7 +70,13 @@ export function Toasts() {
   if (!items.length) return null;
   return (
     <div className="toasts" aria-live="polite">
-      {items.map((t) => t.resolved ? (
+      {items.map((t) => t.ops ? (
+        <div key={t.id} className={`toast ${t.ops.tone}`} onClick={() => t.ops.to && go(t.ops.to)}>
+          <div className="eyebrow" style={{ color: t.ops.color }}>{t.ops.eyebrow}</div>
+          <div style={{ fontWeight: 800, marginTop: 2 }}>{t.ops.title}</div>
+          {t.ops.sub && <div className="small muted">{t.ops.sub}</div>}
+        </div>
+      ) : t.resolved ? (
         <div key={t.id} className="toast toast-ok" onClick={() => go(`/ticket/${t.resolved.id}`)}>
           <div className="row between">
             <span className="eyebrow" style={{ color: 'var(--ok)' }}>✓ Resolved</span>
@@ -90,6 +109,17 @@ export function Toasts() {
   );
 }
 
+function opsToast(ev) {
+  const i = ev.item;
+  if (!i) return null;
+  if (ev.kind === 'field') return { eyebrow: `Operator report · ${FIELD_KINDS[i.kind]?.short || 'Note'}`, title: `Bus ${i.bus} · Route ${i.route}`, sub: `“${i.text}”${i.suggestedDetour ? ' · Detour recommendation ready' : ''}`, tone: i.sev === 'high' ? 'high' : 'medium', color: 'var(--high)', to: '/dispatch' };
+  if (ev.kind === 'message' && i.fromKind !== 'dispatch') return { eyebrow: 'Request for Dispatch', title: i.from, sub: i.text, tone: 'medium', color: 'var(--accent)', to: '/dispatch' };
+  if (ev.kind === 'detour') return { eyebrow: 'Detour published', title: `Routes ${i.routes.join('/')} ${i.direction}`, sub: `${i.closure} · sent to ${i.recipients.length} operators`, tone: 'medium', color: 'var(--med)', to: '/dispatch' };
+  if (ev.kind === 'lost-new') return { eyebrow: 'Lost & Found', title: `${i.id} · ${i.item}`, sub: i.status === 'Found' ? `Found on Bus ${i.foundBy}` : `Drivers alerted: ${(i.alerted || []).join(', ') || 'none'}`, tone: 'medium', color: 'var(--ok)', to: '/lost-found' };
+  if (ev.kind === 'lost-stage') return { eyebrow: `Lost & Found · ${i.status}`, title: `${i.id} · ${i.item}`, sub: i.status === 'Found' ? `Bus ${i.foundBy} · ${i.foundWhere} · to ${terminalName(i.terminal)}` : i.chain[i.chain.length - 1]?.by, tone: 'medium toast-ok', color: 'var(--ok)', to: '/lost-found' };
+  return null;
+}
+
 export default function DashShell({ active, children, compact }) {
   const { go, path } = useNav();
   const [menu, setMenu] = useState(false);
@@ -114,6 +144,8 @@ export default function DashShell({ active, children, compact }) {
   }, [msg]);
 
   const cur = active || path;
+  const role = useRole();
+  const tabs = TABS.filter((t) => allowedTab(role, t.match || t.to));
   const liveStatus = useStore((st) => st.liveStatus);
   const liveLabel = { live: 'Live · shared across every screen', connecting: 'Connecting to live data…', offline: 'Offline · this device only', local: 'Demo · this browser' }[liveStatus] || 'Demo';
   return (
@@ -125,6 +157,7 @@ export default function DashShell({ active, children, compact }) {
             <span className="tagline hide-sm">AI-Powered Operational Intelligence</span>
           </div>
           <DemoFlag />
+          {role && !compact && <span className="role-chip hide-sm">Viewing as {ROLE_LABEL[role]}</span>}
           <div className="grow" />
           {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
@@ -136,6 +169,7 @@ export default function DashShell({ active, children, compact }) {
                   <button className="btn btn-sm btn-primary" onClick={() => { const r = loadDemoScenario(); setMsg(r.already ? 'Demo scenario is already loaded.' : `Demo scenario loaded: ${r.created.length} tickets created.`); setMenu(false); }}>Load Demo Scenario</button>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); go('/operator'); }}>Open Operator App</button>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); go('/'); }}>Switch role</button>
+                  {role && <button className="btn btn-sm" onClick={() => { setMenu(false); setRole(null); }}>Show every tab</button>}
                   <button className="btn btn-sm" onClick={() => { setMenu(false); setConfirmReset(true); }}>Reset demo data</button>
                   <span className="xs muted" style={{ padding: '2px 4px' }}>Shortcut: Shift + D loads the scenario.</span>
                 </div>
@@ -143,10 +177,10 @@ export default function DashShell({ active, children, compact }) {
             )}
           </div>
         </div>
-        {!compact && (
+        {(
           <nav className="dash-nav" aria-label="Views">
-            {TABS.map((t) => (
-              <a key={t.to} href={`#${t.to}`} className={cur.startsWith(t.to) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
+            {tabs.map((t) => (
+              <a key={t.to} href={`#${t.to}`} className={cur.startsWith(t.match || t.to) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
                 {t.label}
               </a>
             ))}

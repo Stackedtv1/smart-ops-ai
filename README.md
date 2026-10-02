@@ -53,6 +53,35 @@ Without those two variables everything runs locally in one browser, as before.
 
 **Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline (17 open issues, including the Guardian demo tickets).
 
+## Operations Communication Layer (v2)
+
+**Operator → Bus → Terminal → Central Dispatch → Maintenance → Facilities → Customer Service**, all feeding the Command Center. State lives in `state.ops` (`src/services/ops.js`, seeded by `src/services/opsSeed.js`) and syncs across screens like Guardian/fleet: BroadcastChannel locally, Supabase `so_meta` key `ops` in live mode (no schema change).
+
+- **Driver Assist** (operator home): four big buttons — RESTROOM · LOST ITEM · VEHICLE ISSUE · DISPATCH — plus Navigation and Road/Hazard reporting.
+- **Stopped/Moving lock**: while the bus is moving, Driver Assist locks. Only the detour banner, a glance-only next-turn view and a ONE-TAP FLAG (GPS pin) remain. The header toggle is a demo control; production reads vehicle speed from AVL/CAN.
+- **Relief Finder** (`/operator/relief`): approved, bus-friendly relief points on/near the route — distance, ahead/behind, hours, bus pull-in, access instructions, accessibility, operator-reported problems. Recalculates on an active detour.
+- **Navigation** (`/operator/navigate`): route-aware map, next stops, detour next-turn, bypassed/temporary stops, relief destination.
+- **Operator Knowledge Map** (`/operator/field`): voice/typed location reports → AI category (road blocked, construction, pothole, restroom closed, stop inaccessible, shelter damaged, safe parking). Restroom/shelter/stop reports also create Facilities tickets.
+- **Central Dispatch Hub** (`/dispatch`): one search box, ops map (buses, reports, relief, terminals, detours), operator reports with recommended detours, messaging to system/terminal/route/bus with acknowledgement tracking, operator requests inbox, fleet board.
+- **Detours**: road-blocked report → recommended detour → Review → Publish to every affected operator, terminal, Customer Service and Command Center, with acknowledgements. Framed as publishing through SMART's existing CAD/AVL in production.
+- **Terminal dashboards** (`/terminal/:id`): active buses, check-ins, late/held/no-ping, incidents, dispatch messages with ack, road reports, lost & found custody (scan in → verify ID → return).
+- **Lost & Found** (`/lost-found`): Customer Service intake → trip matching (route, direction, stop, time → likely buses, ranked) → driver alert → FOUND/NOT ON BUS → terminal check-in → Customer Verified → Returned. Full chain of custody and claim number.
+- **Role-based views**: Login sets the role; tabs filter per role (Central Dispatch = master view). Demo-only; production enforces with Supabase Auth + RLS.
+
+Simulated in the demo and labeled so: bus positions/adherence, schedule used for trip matching, relief points and partner businesses, detour street geometry and bypassed/temporary stops, terminal supervisors and shelves. No passenger counts are shown.
+
+### v2 demo script (Presenter Mode, ~6 min)
+
+1. Phone: **Road / Hazard / Location** → ▶ *Road blocked* → Submit. Dispatch gets a toast.
+2. Dashboard: **Dispatch Hub** → *Review recommended detour* → map shows normal route vs detour, steps, bypassed/temporary stops → **Publish**.
+3. Phone: yellow **DETOUR ACTIVE** banner → Acknowledge (dispatch ack bar moves) → **Navigation** shows the next turn. **RESTROOM** shows relief points recalculated for the detour.
+4. Dashboard: **Lost & Found** → *Fill demo report* → Create → Bus 4602 matched and alerted.
+5. Phone: lost-item card → *Under a seat* → **FOUND**. Dashboard: **Terminals** → Oakland → Scan & check in → Verify ID → Return.
+6. Phone: flip header to **Moving** → screens lock, banner stays, ONE-TAP FLAG only.
+7. Dispatch search: “Where is bus 4602?”, “Which terminal received the lost iPhone?”, “Who hasn’t acknowledged dispatch messages?”
+
+**Questions for SMART:** CAD/AVL vendor and whether it accepts detour pushes; approved operator relief list; current lost & found process and system; terminal names and supervisor roles.
+
 ## Fleet Health & Maintenance
 
 Data path: **Fleet/bus number → VIN → SMART maintenance record → Guardian.** Staff see the bus number; the VIN is the permanent key underneath.
