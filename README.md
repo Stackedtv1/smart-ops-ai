@@ -53,6 +53,38 @@ Without those two variables everything runs locally in one browser, as before.
 
 **Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline (17 open issues, including the Guardian demo tickets).
 
+## Operations Communication Layer (v2)
+
+**Operator → Bus → Terminal → Central Dispatch → Maintenance → Facilities → Customer Service**, all feeding the Command Center. State lives in `state.ops` (`src/services/ops.js`, seeded by `src/services/opsSeed.js`) and syncs across screens like Guardian/fleet: BroadcastChannel locally, Supabase `so_meta` key `ops` in live mode (no schema change).
+
+- **Driver Assist** (operator home): four big buttons — RESTROOM · NAVIGATION/DETOUR · REPORT ISSUE (Vehicle/Road/Stop/Safety/Lost Item) · DISPATCH.
+- **Stopped/Moving lock**: while the bus is moving, Driver Assist locks. Only the detour banner, a glance-only next-turn view and a ONE-TAP FLAG (GPS pin) remain. The header toggle is a demo control; production reads vehicle speed from AVL/CAN.
+- **Relief Finder** (`/operator/relief`): best three options ahead, tiered SMART Verified / Partner Access – Pending Verification / Public Backup; bus-friendly relief points on/near the route — distance, ahead/behind, hours, bus pull-in, access instructions, accessibility, operator-reported problems. Recalculates on an active detour.
+- **Navigation** (`/operator/navigate`): route-aware map, next stops, detour next-turn, bypassed/temporary stops, relief destination.
+- **Operator Knowledge Map** (`/operator/field`): voice/typed location reports → AI category (road blocked, construction, pothole, restroom closed, stop inaccessible, shelter damaged, safe parking). Restroom/shelter/stop reports also create Facilities tickets.
+- **Central Dispatch Hub** (`/dispatch`): one search box, ops map (buses, reports, relief, terminals, detours), operator reports with recommended detours, messaging to system/terminal/route/bus with acknowledgement tracking, operator requests inbox, fleet board.
+- **Detours**: road-blocked report → recommended detour → Review → Publish to every affected operator, terminal, Customer Service and Command Center, with acknowledgements. Framed as publishing through SMART's existing CAD/AVL in production.
+- **Terminal dashboards** (`/terminal/:id`): active buses, check-ins, late/held/no-ping, incidents, dispatch messages with ack, road reports, lost & found custody (scan in → verify ID → return).
+- **Lost & Found** (`/lost-found`): Customer Service intake → trip matching (route, direction, stop, time → likely buses, ranked) → driver alert → FOUND/NOT ON BUS → terminal check-in → Customer Verified → Returned. Full chain of custody and claim number.
+- **Role-based views**: Login sets the role; tabs filter per role (Central Dispatch = master view). Demo-only; production enforces with Supabase Auth + RLS.
+
+Simulated in the demo and labeled so: bus positions/adherence, schedule used for trip matching, relief points and partner businesses, detour street geometry and bypassed/temporary stops, terminal supervisors and shelves. No passenger counts are shown.
+
+### Killer demo sequence (Presenter Mode, ~5 min)
+
+Open `#/present?dash=/dispatch`. Design rule: **one tap to report, one tap to respond, AI handles everything between.**
+
+1. **Phone → REPORT ISSUE → ROAD → ▶ Road blocked → Submit.** Bus, route, GPS and time are automatic.
+2. **Dispatch → Needs attention now → Plan detour.** Guardian already shows Routes 461/462 affected. Planner: closed section → **Generate bus-safe detour** → checks run (turns, clearance, weight, width, live closures; the car route is rejected) → map shows normal route gray, closed section red, detour blue, “3 stops bypassed • 2 temporary stops • +N min” above it → **Publish**.
+3. Fan-out panel: operators (with live acks), terminal, Customer Service, Command Center, rider alert preview.
+4. **Phone:** full-screen DETOUR ACTIVE takeover with voice → **ACKNOWLEDGE** → turn-by-turn. **Start driving** (demo control): bus switches to Moving, forms lock, banner counts down “0.4 mi · Turn right on 12 Mile”, voice announces turns, rejoins at Stop 1301.
+5. **Dispatch search:** “Where is bus 4602?” → route, direction, location, last GPS, schedule, detour + ack. “Which terminal received the lost iPhone?” → custody chain.
+6. **Stop the bus → RESTROOM:** best three options ahead, recalculated for the detour, each labeled SMART Verified / Pending verification / Public backup.
+
+Simulated: bus movement (stands in for AVL), detour street geometry, bus-safe check results. Production: SMART's pre-approved detour library + bus/truck routing data, published through SMART's CAD/AVL.
+
+**Questions for SMART:** CAD/AVL vendor and whether it accepts detour pushes; approved operator relief list; current lost & found process and system; terminal names and supervisor roles.
+
 ## Fleet Health & Maintenance
 
 Data path: **Fleet/bus number → VIN → SMART maintenance record → Guardian.** Staff see the bus number; the VIN is the permanent key underneath.

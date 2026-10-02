@@ -6,6 +6,7 @@ import { MIN, startOfDay, dayKey, yymmdd, fmtDate } from '../lib/time.js';
 import { stopById } from './maps.js';
 import { classifyLocal, resolveLocation, toContractJson, recommendedAction } from './ai.js';
 import * as remote from './supabase.js';
+import { seedOps, emptyOps, diffOps } from './opsSeed.js';
 
 const KEY = 'smart-ops-ai.state.v3';
 const TAB = Math.random().toString(36).slice(2);
@@ -105,6 +106,7 @@ function freshState(now = Date.now()) {
     liveCount: 0,
     guardian: emptyGuardian(),
     fleet: emptyFleet(),
+    ops: seedOps(now),
   };
 }
 
@@ -118,7 +120,7 @@ function load() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (s.day !== dayKey()) return null; // new day -> fresh demo
-    return { ...s, guardian: s.guardian || emptyGuardian(), fleet: s.fleet || emptyFleet() };
+    return { ...s, guardian: s.guardian || emptyGuardian(), fleet: s.fleet || emptyFleet(), ops: s.ops || seedOps() };
   } catch {
     return null;
   }
@@ -149,6 +151,7 @@ try {
   channel.onmessage = (e) => {
     if (!e.data?.state || e.data.from === TAB) return;
     const before = new Map(state.tickets.map((t) => [t.id, t.status]));
+    const prevOps = state.ops;
     const incoming = e.data.state;
     state = incoming;
     notify();
@@ -156,6 +159,7 @@ try {
       if (!before.has(t.id)) emit({ type: 'created', ticket: t });
       else if (before.get(t.id) !== 'Resolved' && t.status === 'Resolved') emit({ type: 'resolved', ticket: t });
     });
+    diffOps(prevOps, incoming.ops).forEach((ev) => emit({ type: 'ops', ...ev }));
   };
 } catch {
   /* BroadcastChannel unsupported */
@@ -198,7 +202,7 @@ export function hydrate(next) {
   state = { ...freshShape(), ...next };
 }
 function freshShape() {
-  return { day: dayKey(), seq: FIRST_LIVE_SEQ, tickets: [], scenarioLoaded: false, liveCount: 0, guardian: emptyGuardian(), fleet: emptyFleet() };
+  return { day: dayKey(), seq: FIRST_LIVE_SEQ, tickets: [], scenarioLoaded: false, liveCount: 0, guardian: emptyGuardian(), fleet: emptyFleet(), ops: emptyOps() };
 }
 
 export function useStore(selector = (s) => s) {
@@ -216,6 +220,10 @@ export function emptyFleet() {
 export function setFleet(fn) {
   commit({ ...state, fleet: fn(state.fleet || emptyFleet()) });
 }
+// Operations communication layer (dispatch, lost & found, detours, field reports).
+export function setOps(fn) {
+  commit({ ...state, ops: fn(state.ops || emptyOps()) });
+}
 export function setGuardian(fn) {
   commit({ ...state, guardian: fn(state.guardian || emptyGuardian()) });
 }
@@ -228,7 +236,7 @@ export function restoreTickets(prev) {
 // ---------------------------------------------------------------------------
 // Live mode (Supabase). One shared demo for every device.
 // ---------------------------------------------------------------------------
-const metaVersion = { guardian: 0, fleet: 0, control: 0 };
+const metaVersion = { guardian: 0, fleet: 0, control: 0, ops: 0 };
 let metaTimer = null;
 let pendingMeta = new Set();
 let lastResetAt = 0;
@@ -238,6 +246,7 @@ const controlOf = (s) => ({ day: s.day, seq: s.seq, scenarioLoaded: !!s.scenario
 function queueMetaSave(prev, next) {
   if (prev.guardian !== next.guardian) pendingMeta.add('guardian');
   if (prev.fleet !== next.fleet) pendingMeta.add('fleet');
+  if (prev.ops !== next.ops) pendingMeta.add('ops');
   if (prev.seq !== next.seq || prev.scenarioLoaded !== next.scenarioLoaded) pendingMeta.add('control');
   if (!pendingMeta.size) return;
   clearTimeout(metaTimer);
@@ -267,7 +276,9 @@ async function seedRemote(fresh) {
   metaVersion.guardian += 1;
   metaVersion.fleet += 1;
   metaVersion.control += 1;
+  metaVersion.ops += 1;
   await Promise.all([
+    remote.saveMeta('ops', fresh.ops, metaVersion.ops),
     remote.saveMeta('guardian', fresh.guardian, metaVersion.guardian),
     remote.saveMeta('fleet', fresh.fleet, metaVersion.fleet),
     remote.saveMeta('control', controlOf(fresh), metaVersion.control),
@@ -288,7 +299,7 @@ async function loadRemote({ initial = false } = {}) {
     commit({ ...fresh, liveStatus: 'live' }, { fromRemote: true });
     return true;
   }
-  for (const k of ['guardian', 'fleet', 'control']) metaVersion[k] = data.meta[k]?.version || 0;
+  for (const k of ['guardian', 'fleet', 'control', 'ops']) metaVersion[k] = data.meta[k]?.version || 0;
   lastResetAt = control?.resetAt || 0;
   commit(
     {
@@ -297,6 +308,7 @@ async function loadRemote({ initial = false } = {}) {
       tickets: data.tickets.sort((a, b) => a.createdAt - b.createdAt),
       guardian: data.meta.guardian?.value || emptyGuardian(),
       fleet: data.meta.fleet?.value || emptyFleet(),
+      ops: data.meta.ops?.value || seedOps(),
       seq: Math.max(control.seq || FIRST_LIVE_SEQ, maxSeqToday(data.tickets)),
       scenarioLoaded: !!control.scenarioLoaded,
       liveCount: control.liveCount || 0,
@@ -335,6 +347,10 @@ if (LIVE && IS_BROWSER) {
           if (hadSwept) (value.incidents || []).filter((i) => !known.has(i.id)).reverse().forEach((incident) => emit({ type: 'guardian', incident }));
         } else if (key === 'fleet') {
           commit({ ...state, fleet: value }, { fromRemote: true });
+        } else if (key === 'ops') {
+          const prevOps = state.ops;
+          commit({ ...state, ops: value }, { fromRemote: true });
+          diffOps(prevOps, value).forEach((ev) => emit({ type: 'ops', ...ev }));
         } else if (key === 'control') {
           if (value?.resetAt && value.resetAt !== lastResetAt) {
             lastResetAt = value.resetAt;

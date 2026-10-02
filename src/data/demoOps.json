@@ -1,0 +1,527 @@
+{
+  "_note": "Route 461/462 relief points are REAL public locations (addresses and hours from public sources, checked Oct 2026). Operator use still needs SMART agreements and on-site confirmation. Other routes' relief points, detour geometry, bypassed stops and schedules are simulated.",
+  "terminals": [
+    {
+      "id": "oakland",
+      "name": "Oakland Terminal",
+      "lat": 42.552,
+      "lng": -83.155,
+      "supervisor": "Terminal Supervisor T. Reed",
+      "routes": [
+        "461",
+        "462"
+      ]
+    },
+    {
+      "id": "macomb",
+      "name": "Macomb Terminal",
+      "lat": 42.56,
+      "lng": -82.995,
+      "supervisor": "Terminal Supervisor L. Ortiz",
+      "routes": [
+        "494",
+        "500",
+        "510"
+      ]
+    },
+    {
+      "id": "wayne",
+      "name": "Wayne Terminal",
+      "lat": 42.33,
+      "lng": -83.23,
+      "supervisor": "Terminal Supervisor J. Patel",
+      "routes": [
+        "250",
+        "261"
+      ]
+    }
+  ],
+  "schedule": {
+    "_note": "Simulated service pattern used for lost-item trip matching. Production reads GTFS stop_times plus AVL vehicle history.",
+    "461": {
+      "headwayMin": 15,
+      "runMin": 70
+    },
+    "462": {
+      "headwayMin": 30,
+      "runMin": 75
+    },
+    "261": {
+      "headwayMin": 30,
+      "runMin": 55
+    },
+    "500": {
+      "headwayMin": 30,
+      "runMin": 50
+    },
+    "510": {
+      "headwayMin": 20,
+      "runMin": 55
+    },
+    "494": {
+      "headwayMin": 30,
+      "runMin": 45
+    },
+    "250": {
+      "headwayMin": 30,
+      "runMin": 40
+    }
+  },
+  "relief": [
+    {
+      "id": "R-HTC",
+      "real": true,
+      "name": "Jason Hargrove Transit Center",
+      "type": "DDOT transit center · operator lounge & restroom",
+      "address": "1121 W 8 Mile Rd, Detroit (Woodward & 8 Mile)",
+      "lat": 42.44333,
+      "lng": -83.11681,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hours": "Indoor building open 24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Bus bays on site. FAST Woodward 461/462 serve this center.",
+      "access": "Dedicated operator lounge and restroom inside, plus public restrooms. DDOT facility: confirm SMART operator access with DDOT.",
+      "accessible": true,
+      "agreement": "DDOT facility · SMART access to confirm",
+      "source": "https://www.bridgedetroit.com/detroits-new-transit-center-at-old-state-fairgrounds-opens-saturday/",
+      "sourceLabel": "BridgeDetroit; City of Detroit",
+      "tier": "partner"
+    },
+    {
+      "id": "R-DPL",
+      "real": true,
+      "name": "Detroit Public Library – Main",
+      "type": "Public library",
+      "address": "5201 Woodward Ave, Detroit",
+      "lat": 42.3585,
+      "lng": -83.0668,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          13,
+          17
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          10,
+          18
+        ]
+      ],
+      "hours": "Mon 10–6 · Tue–Wed 12–8 · Thu–Sat 10–6 · Sun 1–5",
+      "busPull": "caution",
+      "busPullNote": "On Woodward. Curb stop only, no layover space.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://detroitpubliclibrary.org/locations/main",
+      "sourceLabel": "Detroit Public Library",
+      "tier": "public"
+    },
+    {
+      "id": "R-FADL",
+      "real": true,
+      "name": "Ferndale Area District Library",
+      "type": "Public library",
+      "address": "222 E 9 Mile Rd, Ferndale",
+      "lat": 42.4603,
+      "lng": -83.1327,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          12,
+          17
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          12,
+          17
+        ]
+      ],
+      "hours": "Mon–Thu 10–8 · Fri 10–6 · Sat–Sun 12–5",
+      "busPull": "caution",
+      "busPullNote": "Just off Woodward on 9 Mile. Walk-up only, park only where SMART allows.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://www.fadl.org/",
+      "sourceLabel": "Ferndale Area District Library",
+      "tier": "public"
+    },
+    {
+      "id": "R-ROTC",
+      "real": true,
+      "name": "SMART Royal Oak Transit Center",
+      "type": "SMART facility",
+      "address": "202 S Sherman Dr, Royal Oak",
+      "lat": 42.48917,
+      "lng": -83.1475,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hours": "Hours to verify",
+      "busPull": "safe",
+      "busPullNote": "SMART transit center bays. About 1 mile east of Woodward.",
+      "access": "SMART-owned building with ticket office. Restroom availability for operators: confirm with SMART.",
+      "accessible": true,
+      "verifyRestroom": true,
+      "agreement": "SMART facility · confirm restroom",
+      "source": "https://en.wikipedia.org/wiki/Royal_Oak_station_(Michigan)",
+      "sourceLabel": "Public station records",
+      "tier": "partner"
+    },
+    {
+      "id": "R-ROPL",
+      "real": true,
+      "name": "Royal Oak Public Library",
+      "type": "Public library",
+      "address": "222 E 11 Mile Rd, Royal Oak",
+      "lat": 42.49,
+      "lng": -83.142,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        null,
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          18
+        ],
+        [
+          9,
+          18
+        ]
+      ],
+      "hours": "Mon–Thu 9–8 · Fri–Sat 9–6 · Sun closed (verify)",
+      "busPull": "no",
+      "busPullNote": "Downtown Royal Oak, off Woodward. Pair with the Royal Oak Transit Center bays.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://oaklandcounty115.com/2022/01/13/royal-oak-library-announces-new-hours/",
+      "sourceLabel": "Oakland County Times (hours may have changed)",
+      "tier": "public"
+    },
+    {
+      "id": "R-BPL",
+      "real": true,
+      "name": "Baldwin Public Library",
+      "type": "Public library",
+      "address": "300 W Merrill St, Birmingham",
+      "lat": 42.5468,
+      "lng": -83.2155,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          9.5,
+          21
+        ],
+        null
+      ],
+      "hours": "Fri 9:30–9 confirmed · other days verify",
+      "busPull": "no",
+      "busPullNote": "Downtown Birmingham, a few blocks off Woodward. Walk-up only.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://www.baldwinlib.org/",
+      "sourceLabel": "Baldwin Public Library",
+      "tier": "public"
+    },
+    {
+      "id": "R-TPL",
+      "real": true,
+      "name": "Troy Public Library",
+      "type": "Public library · near north terminal",
+      "address": "510 W Big Beaver Rd, Troy",
+      "lat": 42.5626,
+      "lng": -83.1474,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          13,
+          17
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          17
+        ],
+        [
+          9.5,
+          17
+        ]
+      ],
+      "hours": "Mon–Thu 9:30–9 · Fri–Sat 9:30–5 · Sun 1–5",
+      "busPull": "caution",
+      "busPullNote": "Near the Troy Civic Center Park & Ride (Route 461's north end). Walk from the layover.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://troypl.org/",
+      "sourceLabel": "Troy Public Library",
+      "tier": "public"
+    },
+    {
+      "id": "R-500-A",
+      "name": "Mound Rd Partner Pharmacy",
+      "type": "Business partner (demo)",
+      "lat": 42.4325,
+      "lng": -83.0285,
+      "routes": [
+        "500"
+      ],
+      "hours": "7:00 AM – 11:00 PM",
+      "openFrom": 7,
+      "openTo": 23,
+      "busPull": "caution",
+      "busPullNote": "Rear lot, enter from 7 Mile only",
+      "access": "Restroom near pharmacy counter",
+      "accessible": true,
+      "tier": "partner"
+    },
+    {
+      "id": "R-500-B",
+      "name": "Bel Air Center Layover Room",
+      "type": "SMART layover facility (demo)",
+      "lat": 42.4465,
+      "lng": -83.022,
+      "routes": [
+        "500",
+        "510"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Layover bays 3–5",
+      "access": "Keypad entry. Code from Dispatch.",
+      "accessible": true,
+      "tier": "smart"
+    },
+    {
+      "id": "R-510-A",
+      "name": "Van Dyke & 14 Mile Partner Diner",
+      "type": "Business partner (demo)",
+      "lat": 42.5345,
+      "lng": -83.0285,
+      "routes": [
+        "510"
+      ],
+      "hours": "5:00 AM – 9:00 PM",
+      "openFrom": 5,
+      "openTo": 21,
+      "busPull": "safe",
+      "busPullNote": "Bus-length spot on north side of lot",
+      "access": "No purchase needed, show SMART ID",
+      "accessible": true,
+      "tier": "partner"
+    },
+    {
+      "id": "R-494-A",
+      "name": "Dequindre & 12 Mile Fire Station (demo)",
+      "type": "Municipal partner (demo)",
+      "lat": 42.5055,
+      "lng": -83.0875,
+      "routes": [
+        "494"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "caution",
+      "busPullNote": "Never block apparatus bay. Use street side.",
+      "access": "Ring bell at side door",
+      "accessible": true,
+      "tier": "partner"
+    },
+    {
+      "id": "R-261-A",
+      "name": "Michigan & Telegraph Layover Room",
+      "type": "SMART layover facility (demo)",
+      "lat": 42.3005,
+      "lng": -83.2775,
+      "routes": [
+        "261"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Layover lane",
+      "access": "Keypad entry. Code from Dispatch.",
+      "accessible": true,
+      "tier": "smart"
+    },
+    {
+      "id": "R-250-A",
+      "name": "Ford Rd Partner Grocery",
+      "type": "Business partner (demo)",
+      "lat": 42.3305,
+      "lng": -83.2755,
+      "routes": [
+        "250"
+      ],
+      "hours": "6:00 AM – 12:00 AM",
+      "openFrom": 6,
+      "openTo": 24,
+      "busPull": "safe",
+      "busPullNote": "Far east edge of lot",
+      "access": "Restroom at back of store",
+      "accessible": true,
+      "tier": "partner"
+    }
+  ],
+  "detourTemplates": [
+    {
+      "id": "DT-461-12M",
+      "routes": [
+        "461",
+        "462"
+      ],
+      "match": [
+        "woodward",
+        "12 mile",
+        "twelve mile",
+        "13 mile"
+      ],
+      "closure": "Woodward closed between 12 Mile and 13 Mile",
+      "fromStop": "1204",
+      "rejoinStop": "1301",
+      "temporary": [
+        "Main St & 12 Mile (temporary)",
+        "Main St & 13 Mile (temporary)"
+      ],
+      "side": "east",
+      "main": "Woodward",
+      "parallel": "Main St",
+      "cross": {
+        "1204": "12 Mile",
+        "1301": "13 Mile"
+      },
+      "plan": "D-461-12 (demo library)",
+      "bypassedFallback": [
+        "Woodward & Lincoln",
+        "Woodward & 11th St",
+        "Woodward & Catalpa"
+      ]
+    },
+    {
+      "id": "DT-510-12M",
+      "routes": [
+        "510"
+      ],
+      "match": [
+        "van dyke",
+        "12 mile",
+        "twelve mile"
+      ],
+      "closure": "Van Dyke closed between 12 Mile and 14 Mile (water main)",
+      "fromStop": "918",
+      "rejoinStop": "940",
+      "temporary": [
+        "Ryan & 13 Mile (temporary)"
+      ],
+      "side": "west",
+      "main": "Van Dyke",
+      "parallel": "Ryan Rd",
+      "cross": {
+        "918": "12 Mile",
+        "940": "14 Mile"
+      },
+      "plan": "D-510-12 (demo library)",
+      "bypassedFallback": [
+        "Van Dyke & Martin",
+        "Van Dyke & 13 Mile"
+      ]
+    }
+  ]
+}
