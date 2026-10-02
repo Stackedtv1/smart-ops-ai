@@ -7,13 +7,13 @@ import { DemoFlag } from '../components/ui.jsx';
 import { setRole } from '../lib/role.js';
 
 const ROLES = [
-  { id: 'operator', t: 'Operator', d: 'Driver Assist: restroom, lost item, vehicle issue, dispatch. Voice reports, detours.', to: '/operator', who: { name: OPERATOR.name, id: OPERATOR.id, lines: [OPERATOR.garage, `Bus ${OPERATOR.bus}`, `Route ${routeLabel(OPERATOR.route)}`] } },
-  { id: 'dispatch', t: 'Central Dispatch', d: 'Master view: ops map, messages with acknowledgement, detours, search.', to: '/dispatch', who: { name: 'Angela Brooks', id: 'DEMO-S-204', lines: ['Dispatch Supervisor', 'All garages'] } },
-  { id: 'terminal', t: 'Terminal Supervisor', d: 'Active buses, check-ins, incidents, dispatch messages, lost & found custody.', to: '/terminal/oakland', who: { name: 'T. Reed', id: 'DEMO-T-410', lines: ['Oakland Terminal'] } },
+  { id: 'operator', t: 'Operator', d: 'Four buttons: Restroom, Navigation, Report Issue, Dispatch.', to: '/operator', who: { name: OPERATOR.name, id: OPERATOR.id, lines: [OPERATOR.garage, `Bus ${OPERATOR.bus}`, `Route ${routeLabel(OPERATOR.route)}`] } },
+  { id: 'dispatch', t: 'Central Dispatch', d: 'Home shows what needs you now. Road closed → detour in 3 taps.', to: '/dispatch', who: { name: 'Angela Brooks', id: 'DEMO-S-204', lines: ['Dispatch Supervisor', 'All garages'] } },
+  { id: 'terminal', t: 'Terminal Supervisor', d: 'Your terminal only: buses, incidents, lost & found, messages.', to: '/terminal/oakland', who: { name: 'T. Reed', id: 'DEMO-T-410', lines: ['Oakland Terminal'] } },
   { id: 'customer', t: 'Customer Service', d: 'Lost & Found intake, AI trip matching, claim tracking.', to: '/lost-found', who: { name: 'Customer Service Desk', id: 'DEMO-C-120', lines: ['Lost & Found only'] } },
-  { id: 'maintenance', t: 'Maintenance', d: 'Vehicle defect queue, fleet health, repair close-out.', to: '/maintenance', who: { name: 'Daniel Alvarez', id: 'DEMO-M-311', lines: ['Technician', 'Oakland Terminal'] } },
-  { id: 'facilities', t: 'Facilities', d: 'Shelters, trash, signs, lighting, relief-point problems.', to: '/facilities', who: { name: 'Shelter Crew 1', id: 'DEMO-F-102', lines: ['Facilities', 'Oakland / Wayne'] } },
-  { id: 'admin', t: 'Management', d: 'Command dashboard, analytics, adoption, ROI calculator.', to: '/dashboard', who: { name: 'Executive View', id: 'DEMO-A-001', lines: ['Administration', 'Analytics & trends'] } },
+  { id: 'maintenance', t: 'Maintenance', d: 'Your work queue: high priority, assigned to you, open, completed.', to: '/maintenance', who: { name: 'Daniel Alvarez', id: 'DEMO-M-311', lines: ['Technician', 'Oakland Terminal'] } },
+  { id: 'facilities', t: 'Facilities', d: 'Your work queue: shelters, trash, signs, relief-point problems.', to: '/facilities', who: { name: 'Shelter Crew 1', id: 'DEMO-F-102', lines: ['Facilities', 'Oakland / Wayne'] } },
+  { id: 'admin', t: 'Management', d: 'Overview, fleet health, analytics, ROI.', to: '/dashboard', who: { name: 'Executive View', id: 'DEMO-A-001', lines: ['Administration', 'Analytics & trends'] } },
 ];
 
 export default function Login() {

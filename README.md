@@ -53,6 +53,23 @@ Without those two variables everything runs locally in one browser, as before.
 
 **Backup:** Demo menu → *Load Demo Scenario* (or `Shift + D`) creates 5 tickets with no network or API. *Reset demo data* restores the morning baseline (17 open issues, including the Guardian demo tickets).
 
+## Role-based screens (design rule)
+
+**Operator: 1–2 taps. Dispatcher: 2–3 taps. Everything complicated happens behind the scenes.** Every feature still exists; each role only sees its own.
+
+| Role | Navigation |
+|---|---|
+| Operator | Four buttons: Restroom · Navigation/Detour · Report Issue · Dispatch (+ Pre-Trip, My Reports) |
+| Central Dispatch | Home (needs attention + ROAD CLOSED) · Map/Detours · Messages · Incidents · More |
+| Terminal Supervisor | Terminal · Buses · Incidents · Lost & Found · Messages |
+| Maintenance / Facilities | My Work Queue: High Priority → Assigned to Me → Open Jobs → Completed |
+| Customer Service | Lost & Found |
+| Management | Overview · Fleet Health · Analytics · ROI |
+
+Guardian runs in the background and surfaces only as alerts (Needs attention, toasts). Copilot is the floating **Ask SMART Ops** button on every staff screen: “What's wrong with 3987?” → answer + one OPEN TICKET button.
+
+Detours: ROAD CLOSED → choose location → SMART Ops builds the bus detour → Review → Publish. Driver gets ⚠ DETOUR ACTIVE · Follow navigation · +N min • N stops bypassed · ACKNOWLEDGE.
+
 ## Operations Communication Layer (v2)
 
 **Operator → Bus → Terminal → Central Dispatch → Maintenance → Facilities → Customer Service**, all feeding the Command Center. State lives in `state.ops` (`src/services/ops.js`, seeded by `src/services/opsSeed.js`) and syncs across screens like Guardian/fleet: BroadcastChannel locally, Supabase `so_meta` key `ops` in live mode (no schema change).

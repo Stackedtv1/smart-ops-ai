@@ -803,3 +803,39 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .dash-nav { scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
 .op-top { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
 .modal.modal-wide { width: min(880px, 100%); }
+
+/* Ask SMART Ops (floating) */
+.askfab { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 55; display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border: 0; border-radius: 999px; background: var(--bar); color: #fff; font-weight: 800; font-size: 15px; box-shadow: 0 6px 24px rgba(0,0,0,.28); }
+.askfab svg { color: var(--flag); }
+.presenter .askfab { left: 436px; }
+.askpanel { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 56; width: min(400px, calc(100vw - 32px)); max-height: min(620px, calc(100dvh - 32px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.3); overflow: hidden; }
+.presenter .askpanel { left: 436px; }
+.askpanel-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 10px 16px; background: var(--bar); color: #fff; }
+.askpanel-h svg { color: var(--flag); vertical-align: -2px; }
+.askpanel-h .btn { color: #fff; }
+.askpanel-b { flex: 1; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.askpanel-f { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ask-q { align-self: flex-end; margin-left: auto; max-width: 85%; background: var(--accent); color: #fff; padding: 7px 11px; border-radius: 12px 12px 2px 12px; font-weight: 600; font-size: 14px; width: fit-content; }
+.ask-a { background: var(--surface-2); border: 1px solid var(--line); padding: 10px 12px; border-radius: 12px 12px 12px 2px; font-size: 14px; margin-top: 6px; }
+.ask-a ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.more-menu { position: fixed; right: 16px; top: 100px; z-index: 45; width: min(280px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; }
+.more-menu button { text-align: left; padding: 9px 12px; border: 0; background: none; border-radius: var(--r-sm); font-weight: 700; color: var(--ink); }
+.more-menu button:hover, .more-menu button.on { background: var(--accent-soft); color: var(--accent); }
+@media (max-width: 640px) { .askfab { padding: 11px 14px; font-size: 14px; } }
+.roadclosed { display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px 20px; border: 0; border-radius: var(--r); background: #b3261e; color: #fff; text-align: left; box-shadow: var(--shadow); }
+.roadclosed:hover { filter: brightness(1.06); }
+.roadclosed .rc-ico { font-size: 32px; }
+.roadclosed b { display: block; font-family: var(--font-display); font-size: 30px; letter-spacing: .05em; line-height: 1; }
+.roadclosed span span { font-size: 14px; opacity: .9; }
+.closure-pick { flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; padding: 12px 14px; }
+.closure-pick b { font-size: 15px; }
+.closure-pick span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.closure-pick.hot { border: 2px solid var(--high); background: var(--high-soft); }
+.takeover-card.simple { align-items: center; text-align: center; gap: 12px; padding: 26px 18px 22px; background: #1c1600; color: #fff; }
+.tk-warn { font-family: var(--font-display); font-size: 34px; font-weight: 700; letter-spacing: .06em; color: var(--flag); }
+.tk-main { font-size: 26px; font-weight: 800; }
+.tk-sub { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: #ffd34d; }
+.tk-why { font-size: 14px; opacity: .8; }
+.takeover-card.simple .bigack { background: var(--flag); color: #1c1600; }
+.qgroup + .qgroup { border-top: 1px solid var(--line); }
+.qgroup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-left: 4px solid; background: var(--surface-2); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }

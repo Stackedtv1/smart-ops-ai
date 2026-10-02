@@ -5,23 +5,10 @@ import { deptLabel } from '../lib/config.js';
 import { durationLabel } from '../lib/time.js';
 import { DemoFlag, Modal } from './ui.jsx';
 import { useStore } from '../services/store.js';
-import { useRole, setRole, allowedTab, ROLE_LABEL } from '../lib/role.js';
+import { useRole, setRole, navFor, NAV, ROLE_LABEL } from '../lib/role.js';
+import AskFab from './AskFab.jsx';
 import { FIELD_KINDS, terminalName } from '../services/ops.js';
 
-const TABS = [
-  { to: '/dispatch', label: 'Dispatch Hub' },
-  { to: '/dashboard', label: 'Command' },
-  { to: '/terminal/oakland', match: '/terminal', label: 'Terminals' },
-  { to: '/lost-found', label: 'Lost & Found' },
-  { to: '/maintenance', label: 'Maintenance' },
-  { to: '/facilities', label: 'Facilities' },
-  { to: '/safety', label: 'Safety' },
-  { to: '/fleet', label: 'Fleet Health' },
-  { to: '/guardian', label: 'Guardian' },
-  { to: '/copilot', label: 'Copilot' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/roi', label: 'ROI' },
-];
 
 export function Clock() {
   const [t, setT] = useState(new Date());
@@ -151,7 +138,9 @@ export default function DashShell({ active, children, compact }) {
     if (nav && on) nav.scrollLeft = Math.max(0, on.offsetLeft - nav.clientWidth / 2 + on.clientWidth / 2);
   }, [cur]);
   const role = useRole();
-  const tabs = TABS.filter((t) => allowedTab(role, t.match || t.to));
+  const nav = navFor(role || 'dispatch', cur);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreOn = (nav.more || []).find((t) => t.on(cur));
   const liveStatus = useStore((st) => st.liveStatus);
   const liveLabel = { live: 'Live · shared across every screen', connecting: 'Connecting to live data…', offline: 'Offline · this device only', local: 'Demo · this browser' }[liveStatus] || 'Demo';
   return (
@@ -163,7 +152,7 @@ export default function DashShell({ active, children, compact }) {
             <span className="tagline hide-sm">AI-Powered Operational Intelligence</span>
           </div>
           <DemoFlag />
-          {role && !compact && <span className="role-chip hide-sm">Viewing as {ROLE_LABEL[role]}</span>}
+          {!compact && <span className="role-chip hide-sm">{ROLE_LABEL[role || 'dispatch']}</span>}
           <div className="grow" />
           {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
@@ -175,7 +164,10 @@ export default function DashShell({ active, children, compact }) {
                   <button className="btn btn-sm btn-primary" onClick={() => { const r = loadDemoScenario(); setMsg(r.already ? 'Demo scenario is already loaded.' : `Demo scenario loaded: ${r.created.length} tickets created.`); setMenu(false); }}>Load Demo Scenario</button>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); go('/operator'); }}>Open Operator App</button>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); go('/'); }}>Switch role</button>
-                  {role && <button className="btn btn-sm" onClick={() => { setMenu(false); setRole(null); }}>Show every tab</button>}
+                  <span className="xs muted" style={{ padding: '4px 4px 0', fontWeight: 700 }}>View as</span>
+                  <div className="row wrap" style={{ gap: 4 }}>
+                    {Object.entries(NAV).map(([k, v]) => <button key={k} className={`btn btn-sm ${(role || 'dispatch') === k ? 'btn-primary' : ''}`} onClick={() => { setMenu(false); setRole(k); go(v.home); }}>{v.label}</button>)}
+                  </div>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); setConfirmReset(true); }}>Reset demo data</button>
                   <span className="xs muted" style={{ padding: '2px 4px' }}>Shortcut: Shift + D loads the scenario.</span>
                 </div>
@@ -185,20 +177,31 @@ export default function DashShell({ active, children, compact }) {
         </div>
         {(
           <nav className="dash-nav" aria-label="Views" ref={navRef}>
-            {tabs.map((t) => (
-              <a key={t.to} href={`#${t.to}`} className={cur.startsWith(t.match || t.to) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
+            {nav.tabs.map((t) => (
+              <a key={t.to} href={`#${t.to}`} className={t.on(cur) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
                 {t.label}
               </a>
             ))}
+            {nav.more?.length > 0 && (
+              <a href="#more" className={moreOn ? 'on' : ''} onClick={(e) => { e.preventDefault(); setMoreOpen((m) => !m); }} aria-expanded={moreOpen}>
+                {moreOn ? moreOn.label : 'More'} ▾
+              </a>
+            )}
           </nav>
         )}
       </header>
+      {moreOpen && (
+        <div className="more-menu" role="menu" onMouseLeave={() => setMoreOpen(false)}>
+          {nav.more.map((t) => <button key={t.to} role="menuitem" className={t.on(cur) ? 'on' : ''} onClick={() => { setMoreOpen(false); go(t.to); }}>{t.label}</button>)}
+        </div>
+      )}
       {msg && <div className="demo-ribbon" role="status">{msg}</div>}
       <main className="dash-main">{children}</main>
       <footer className="dash-footer">
         DEMO / CONCEPT SYSTEM · Prototype by Bestowal Powers A.I. · Simulated operational data · Not affiliated with, endorsed by, or connected to SMART systems. Route numbers are public SMART routes; fleet numbers, employees and stop IDs are fictional.
       </footer>
       <Toasts />
+      <AskFab />
       {confirmReset && (
         <Modal
           title="Reset demo data?"

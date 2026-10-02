@@ -13,7 +13,7 @@ import { PriorityPill, StatusPill, RouteBadge } from '../components/ui.jsx';
 import OpsMap from '../components/OpsMap.jsx';
 import { catShort } from '../lib/config.js';
 
-export default function Terminal({ id = 'oakland' }) {
+export default function Terminal({ id = 'oakland', view = 'overview' }) {
   const { go } = useNav();
   const term = terminalById(id) || TERMINALS[0];
   const ops = useStore((s) => s.ops);
@@ -34,14 +34,14 @@ export default function Terminal({ id = 'oakland' }) {
   const supervisor = term.supervisor;
 
   return (
-    <DashShell active="/terminal">
+    <DashShell>
       <div className="row between wrap">
         <div>
           <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.02em' }}>{term.name}</h1>
           <div className="small muted">Terminal dashboard · {supervisor} · Routes {term.routes.join(', ')}</div>
         </div>
         <div className="filters">
-          {TERMINALS.map((t) => <button key={t.id} className={t.id === term.id ? 'on' : ''} onClick={() => go(`/terminal/${t.id}`)}>{t.name}</button>)}
+          {TERMINALS.map((t) => <button key={t.id} className={t.id === term.id ? 'on' : ''} onClick={() => go(`/terminal/${t.id}${view === 'overview' ? '' : `/${view}`}`)}>{t.name}</button>)}
         </div>
       </div>
 
@@ -53,6 +53,8 @@ export default function Terminal({ id = 'oakland' }) {
         </div>
       ))}
 
+      {view === 'overview' && (
+        <>
       <div className="stat-row">
         <StatCard n={fleet.filter((b) => b.status !== 'Held').length} label="Buses out" lead />
         <StatCard n={fleet.filter((b) => b.status === 'Late').length} label="Running late" stripe="var(--med)" />
@@ -60,8 +62,25 @@ export default function Terminal({ id = 'oakland' }) {
         <StatCard n={incidents.length} label="Open incidents" stripe="var(--accent)" />
         <StatCard n={lost.length} label="Lost & found here" stripe="var(--ok)" />
       </div>
+          <div className="main-grid">
+            <section className="panel">
+              <div className="panel-h"><h2>{term.name} routes</h2><span className="small muted">Simulated AVL</span></div>
+              <OpsMap routes={term.routes} buses={fleet} field={road} detours={detours} showTerminals height={320} label={`${term.name} routes map`} />
+            </section>
+            <div className="stack" style={{ gap: 16 }}>
+          <section className="panel">
+            <div className="panel-h"><h2>Road & service reports</h2><span className="tag">{road.length}</span></div>
+            <ul className="ack-list">
+              {road.length === 0 && <li className="small muted">None today on this terminal's routes.</li>}
+              {road.map((f) => <li key={f.id}><div className="small" style={{ fontWeight: 700 }}>{FIELD_KINDS[f.kind]?.label} · Bus {f.bus} · {fmtTime(f.at)}</div><div className="small">“{f.text}”</div><div className="xs muted">{f.status}</div></li>)}
+            </ul>
+          </section>
+            </div>
+          </div>
+        </>
+      )}
 
-      <div className="main-grid">
+      {view === 'buses' && (
         <section className="panel">
           <div className="panel-h"><h2>Active buses & operator check-ins</h2><span className="small muted">Simulated AVL</span></div>
           <div className="table-wrap">
@@ -81,30 +100,11 @@ export default function Terminal({ id = 'oakland' }) {
               </tbody>
             </table>
           </div>
-          <OpsMap routes={term.routes} buses={fleet} field={road} detours={detours} showTerminals height={300} label={`${term.name} routes map`} />
+          
         </section>
+      )}
 
-        <div className="stack" style={{ gap: 16 }}>
-          <section className="panel">
-            <div className="panel-h"><h2>Central Dispatch</h2></div>
-            <div className="panel-b stack-sm">
-              {note && <div className="notice notice-ok">{note}</div>}
-              {inbox.slice(0, 4).map((m) => <MessageCard key={m.id} m={m} recipient={m.recipients.includes(recipient) ? recipient : null} by={supervisor} />)}
-              <textarea className="textarea" style={{ minHeight: 64 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Message Central Dispatch…" />
-              <button className="btn btn-primary" disabled={!text.trim()} onClick={() => { sendMessage({ to: { kind: 'dispatch' }, from: term.name, fromKind: 'terminal', text: text.trim() }); setText(''); setNote('Sent to Central Dispatch.'); }}>Send to Dispatch</button>
-            </div>
-          </section>
-          <section className="panel">
-            <div className="panel-h"><h2>Road & service reports</h2><span className="tag">{road.length}</span></div>
-            <ul className="ack-list">
-              {road.length === 0 && <li className="small muted">None today on this terminal's routes.</li>}
-              {road.map((f) => <li key={f.id}><div className="small" style={{ fontWeight: 700 }}>{FIELD_KINDS[f.kind]?.label} · Bus {f.bus} · {fmtTime(f.at)}</div><div className="small">“{f.text}”</div><div className="xs muted">{f.status}</div></li>)}
-            </ul>
-          </section>
-        </div>
-      </div>
-
-      <div className="main-grid">
+      {view === 'incidents' && (
         <section className="panel">
           <div className="panel-h"><h2>Incidents & maintenance problems</h2><span className="tag">{incidents.length}</span></div>
           <ul className="ack-list">
@@ -117,7 +117,9 @@ export default function Terminal({ id = 'oakland' }) {
             ))}
           </ul>
         </section>
+      )}
 
+      {view === 'lost' && (
         <section className="panel">
           <div className="panel-h"><h2>Lost & Found at this terminal</h2><span className="tag">{lost.length}</span></div>
           <div className="panel-b stack">
@@ -139,7 +141,19 @@ export default function Terminal({ id = 'oakland' }) {
             ))}
           </div>
         </section>
-      </div>
+      )}
+
+      {view === 'messages' && (
+          <section className="panel">
+            <div className="panel-h"><h2>Central Dispatch</h2></div>
+            <div className="panel-b stack-sm">
+              {note && <div className="notice notice-ok">{note}</div>}
+              {inbox.slice(0, 4).map((m) => <MessageCard key={m.id} m={m} recipient={m.recipients.includes(recipient) ? recipient : null} by={supervisor} />)}
+              <textarea className="textarea" style={{ minHeight: 64 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Message Central Dispatch…" />
+              <button className="btn btn-primary" disabled={!text.trim()} onClick={() => { sendMessage({ to: { kind: 'dispatch' }, from: term.name, fromKind: 'terminal', text: text.trim() }); setText(''); setNote('Sent to Central Dispatch.'); }}>Send to Dispatch</button>
+            </div>
+          </section>
+      )}
       <p className="xs muted">Terminal names, supervisors and shelf locations are demo placeholders. Verify real garage and terminal names with SMART.</p>
     </DashShell>
   );
