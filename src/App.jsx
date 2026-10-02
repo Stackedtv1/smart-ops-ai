@@ -60,7 +60,10 @@ export function Screen({ compact }) {
 // Presenter Mode: operator phone and command dashboard on one screen,
 // sharing one live data store.
 function Presenter() {
-  const { go } = useNav();
+  const { go, path } = useNav();
+  const q = qs(path);
+  const phoneStart = q.get('phone') || '/operator';
+  const dashStart = q.get('dash') || '/dashboard';
   return (
     <div className="presenter">
       <div className="phone-col">
@@ -70,7 +73,7 @@ function Presenter() {
         </div>
         <div className="phone">
           <div className="screen" data-phone-screen>
-            <NavProvider initial="/operator" scrollTarget="[data-phone-screen]">
+            <NavProvider initial={phoneStart} scrollTarget="[data-phone-screen]">
               <Screen />
             </NavProvider>
           </div>
@@ -78,7 +81,7 @@ function Presenter() {
         <DemoFlag />
       </div>
       <div className="dash-col" data-dash-col>
-        <NavProvider initial="/dashboard" scrollTarget="[data-dash-col]">
+        <NavProvider initial={dashStart} scrollTarget="[data-dash-col]">
           <Screen compact />
         </NavProvider>
       </div>
@@ -88,7 +91,7 @@ function Presenter() {
 
 function Root() {
   const { path } = useNav();
-  if (path === '/present') return <Presenter />;
+  if (path === '/present' || path.startsWith('/present?')) return <Presenter />;
   return <Screen />;
 }
 

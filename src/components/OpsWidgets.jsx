@@ -113,13 +113,14 @@ export function ReliefRow({ r, onPick, active }) {
           <span className="num relief-d">{r.miles.toFixed(1)} mi</span>
         </span>
         <span className="relief-tags">
+          {r.real && <span className="rt rt-real">Real location</span>}
           <span className={`rt rt-${r.status.code}`}>{r.status.label}</span>
           <span className={`rt rt-${pull[1]}`}>{pull[0]}</span>
           {r.accessible && <span className="rt">♿ Accessible</span>}
           {r.ahead === false && <span className="rt">Behind you</span>}
           {r.detourNote && <span className={`rt ${r.detourNote.startsWith('On') ? 'rt-detour' : 'rt-bad'}`}>{r.detourNote}</span>}
         </span>
-        <span className="xs muted">{r.type} · {r.hours}</span>
+        <span className="xs muted">{r.type}{r.address ? ` · ${r.address}` : ''}</span>
       </span>
     </button>
   );

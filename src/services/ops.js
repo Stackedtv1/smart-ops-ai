@@ -205,12 +205,12 @@ export function matchTrips({ route, direction, at, stopId }) {
 }
 
 // A lost-item report the scripted demo can fill in: a time the demo operator's
-// bus really did pass Woodward & 9 Mile northbound (per the simulated schedule).
+// bus really did pass Woodward & Warren northbound on its current trip.
 export function demoLostItemDraft(now = Date.now()) {
   const route = OPERATOR.route;
   const [fwd] = directionsOf(route);
-  const stopId = '382';
-  // The time Bus 4602 passed Woodward & 9 Mile on its current trip.
+  const stopId = '4610';
+  // The time Bus 4602 passed Woodward & Warren on its current trip.
   const p = passTime(OPERATOR.bus, stopId, fwd, now);
   const at = Math.min(p?.tp ?? now - 8 * MIN, now - 4 * MIN) - 2 * MIN;
   return { item: 'Blue backpack with laptop', category: 'Bag', route, direction: fwd, stopId, approxAt: Math.round(at / MIN) * MIN, customer: 'Jordan M. (demo customer)', contact: '(313) 555-0142 (demo)' };
@@ -441,17 +441,74 @@ export const activeDetourFor = (ops, route) => ops.detours.find((d) => d.active 
 // ---------------------------------------------------------------------------
 // Relief finder
 // ---------------------------------------------------------------------------
+const fmtH = (h) => {
+  const hh = Math.floor(h) % 24, mm = Math.round((h % 1) * 60);
+  const d = new Date(); d.setHours(hh, mm, 0, 0);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: mm ? '2-digit' : undefined });
+};
+
+// true / false / null (hours unknown for today)
 function openNow(r, now) {
   if (r.open24) return true;
-  const h = new Date(now).getHours() + new Date(now).getMinutes() / 60;
+  const d = new Date(now);
+  const h = d.getHours() + d.getMinutes() / 60;
+  if (r.hoursByDay) {
+    const today = r.hoursByDay[d.getDay()];
+    if (today === undefined) return null;
+    if (today === null) return null; // unknown or unconfirmed for today
+    return h >= today[0] && h < today[1];
+  }
+  if (r.openFrom == null) return null;
   return h >= r.openFrom && h < r.openTo;
+}
+
+function closesAt(r, now) {
+  if (r.open24) return null;
+  const today = r.hoursByDay ? r.hoursByDay[new Date(now).getDay()] : r.openFrom != null ? [r.openFrom, r.openTo] : null;
+  return today ? today[1] : null;
 }
 
 export function reliefStatus(r, ops, now = Date.now()) {
   const reports = (ops.field || []).filter((f) => f.reliefId === r.id && f.kind === 'restroom_closed' && f.status !== 'Resolved' && now - f.at < 24 * 60 * MIN);
   if (reports.length) return { code: 'closed', label: 'Reported closed', reports };
-  if (!openNow(r, now)) return { code: 'hours', label: 'Closed now', reports };
-  return { code: 'open', label: 'Open now', reports };
+  if (r.verifyRestroom) return { code: 'verify', label: 'Restroom to confirm', reports };
+  const o = openNow(r, now);
+  if (o === null) return { code: 'verify', label: 'Hours to verify today', reports };
+  if (!o) return { code: 'hours', label: 'Closed now', reports };
+  const c = closesAt(r, now);
+  const h = new Date(now).getHours() + new Date(now).getMinutes() / 60;
+  if (c != null && c - h < 1) return { code: 'open', label: `Open · closes ${fmtH(c)}`, reports, closingSoon: true };
+  return { code: 'open', label: r.open24 ? 'Open 24 hours' : `Open until ${fmtH(c)}`, reports };
+}
+
+// How long the operator has gone without a relief break, and the stretch ahead.
+export function reliefClock(ops, bus, now = Date.now()) {
+  const last = ops.lastBreak?.[bus] ?? now - 112 * MIN;
+  return { last, minutes: Math.max(0, Math.round((now - last) / MIN)) };
+}
+export function markBreak(bus) {
+  setOps((o) => ({ ...o, lastBreak: { ...(o.lastBreak || {}), [bus]: Date.now() } }));
+}
+
+// Relief points laid out along the whole route (0 = path start, 1 = path end).
+export const routeRunMin = (route) => schedOf(route).runMin;
+export function routeEnds(route) {
+  const list = stopsOnRoute(route);
+  const [fwd] = directionsOf(route);
+  const r = String(route);
+  if (r === '461' || r === '462') return fwd === 'Northbound' ? ['Downtown Detroit', 'Troy'] : ['Troy', 'Downtown Detroit'];
+  return [list[0]?.name || 'Start', list[list.length - 1]?.name || 'End'];
+}
+
+export function routeReliefStrip(route, ops, now = Date.now()) {
+  const path = routeById(route)?.path;
+  const run = schedOf(route).runMin;
+  return RELIEF.filter((r) => r.routes.includes(String(route)))
+    .map((r) => {
+      const a = along(path, r.lat, r.lng);
+      return { ...r, f: a.f, offM: a.off, atMin: Math.round(a.f * run), status: reliefStatus(r, ops, now) };
+    })
+    .sort((a, b) => a.f - b.f);
 }
 
 // Approved relief points for the operator's route, ordered by distance ahead.
@@ -481,16 +538,17 @@ export function reliefFor({ route, lat, lng, ops, now = Date.now(), f = null, di
     .sort((a, b) => (b.usable - a.usable) || (b.ahead - a.ahead) || (a.detourNote === 'On your detour path' ? -1 : 0) - (b.detourNote === 'On your detour path' ? -1 : 0) || a.dist - b.dist);
 }
 
-// Demo operator position for navigation: Bus 4602 northbound on Woodward,
-// just past 9 Mile, heading toward the 12 Mile area.
+// Demo operator position: Bus 4602 northbound on Woodward between 7 Mile and
+// 8 Mile, about to reach the Jason Hargrove Transit Center, with the 12 Mile
+// area (detour scenario) further ahead.
 export function operatorPosition() {
   const route = OPERATOR.route;
   const path = routeById(route)?.path;
-  const a = stopById('382');
-  const b = stopById('1204');
+  const a = stopById('7010');
+  const b = stopById('1045');
   const fa = along(path, a.lat, a.lng).f;
   const fb = along(path, b.lat, b.lng).f;
-  const f = fa + (fb - fa) * 0.25;
+  const f = fa + (fb - fa) * 0.6;
   const pt = pointAt(path, f) || [a.lat, a.lng];
   const [fwd] = directionsOf(route);
   return { bus: OPERATOR.bus, route, lat: pt[0], lng: pt[1], f, dir: fwd };

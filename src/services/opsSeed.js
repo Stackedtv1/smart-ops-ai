@@ -45,6 +45,7 @@ export function seedOps(now = Date.now()) {
   return {
     seq: { msg: 4, lf: 3, fr: 5, dt: 1 },
     motion: {},
+    lastBreak: { 4602: ago(112) },
     detours: [],
     messages: [
       {
@@ -96,7 +97,7 @@ export function seedOps(now = Date.now()) {
       },
     ],
     field: [
-      { id: 'FR-001', at: ago(52), bus: '4210', route: '462', by: 'DEMO-2213', text: 'Restroom at the Ferndale community center is closed, sign says plumbing repair.', lat: 42.4618, lng: -83.1352, reliefId: 'R-461-B', ...pick(classifyField('restroom closed plumbing')), status: 'Open' },
+      { id: 'FR-001', at: ago(52), bus: '4731', route: '500', by: 'DEMO-3144', text: 'Restroom at the Mound Rd partner pharmacy is closed, sign says plumbing repair.', lat: 42.4325, lng: -83.0285, reliefId: 'R-500-A', ...pick(classifyField('restroom closed plumbing')), status: 'Open' },
       { id: 'FR-002', at: ago(75), bus: '4731', route: '500', by: 'DEMO-3144', text: 'Big pothole in the curb lane on Mound just south of 7 Mile.', lat: 42.4300, lng: -83.0283, ...pick(classifyField('pothole')), status: 'Sent to road agency' },
       { id: 'FR-003', at: ago(33), bus: '3987', route: '510', by: 'DEMO-3021', text: 'Pothole at the Van Dyke and 12 Mile stop, front tire dropped hard.', lat: 42.5045, lng: -83.0268, ...pick(classifyField('pothole')), status: 'Open' },
       { id: 'FR-004', at: ago(120), bus: '4415', route: '261', by: 'DEMO-3310', text: 'Construction lane shift on Michigan at Greenfield, right lane closed.', lat: 42.3180, lng: -83.2000, ...pick(classifyField('construction lane closed')), status: 'Reviewed' },

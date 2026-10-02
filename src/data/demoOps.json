@@ -1,72 +1,601 @@
 {
-  "_note": "SIMULATED demo data. Relief points, partner businesses, detour geometry, bypassed stops and schedules are fictional. In production SMART supplies its approved operator relief list, CAD/AVL detours and GTFS stop_times.",
+  "_note": "Route 461/462 relief points are REAL public locations (addresses and hours from public sources, checked Oct 2026). Operator use still needs SMART agreements and on-site confirmation. Other routes' relief points, detour geometry, bypassed stops and schedules are simulated.",
   "terminals": [
-    { "id": "oakland", "name": "Oakland Terminal", "lat": 42.5520, "lng": -83.1550, "supervisor": "Terminal Supervisor T. Reed", "routes": ["461", "462"] },
-    { "id": "macomb", "name": "Macomb Terminal", "lat": 42.5600, "lng": -82.9950, "supervisor": "Terminal Supervisor L. Ortiz", "routes": ["494", "500", "510"] },
-    { "id": "wayne", "name": "Wayne Terminal", "lat": 42.3300, "lng": -83.2300, "supervisor": "Terminal Supervisor J. Patel", "routes": ["250", "261"] }
+    {
+      "id": "oakland",
+      "name": "Oakland Terminal",
+      "lat": 42.552,
+      "lng": -83.155,
+      "supervisor": "Terminal Supervisor T. Reed",
+      "routes": [
+        "461",
+        "462"
+      ]
+    },
+    {
+      "id": "macomb",
+      "name": "Macomb Terminal",
+      "lat": 42.56,
+      "lng": -82.995,
+      "supervisor": "Terminal Supervisor L. Ortiz",
+      "routes": [
+        "494",
+        "500",
+        "510"
+      ]
+    },
+    {
+      "id": "wayne",
+      "name": "Wayne Terminal",
+      "lat": 42.33,
+      "lng": -83.23,
+      "supervisor": "Terminal Supervisor J. Patel",
+      "routes": [
+        "250",
+        "261"
+      ]
+    }
   ],
   "schedule": {
     "_note": "Simulated service pattern used for lost-item trip matching. Production reads GTFS stop_times plus AVL vehicle history.",
-    "461": { "headwayMin": 15, "runMin": 70 },
-    "462": { "headwayMin": 30, "runMin": 75 },
-    "261": { "headwayMin": 30, "runMin": 55 },
-    "500": { "headwayMin": 30, "runMin": 50 },
-    "510": { "headwayMin": 20, "runMin": 55 },
-    "494": { "headwayMin": 30, "runMin": 45 },
-    "250": { "headwayMin": 30, "runMin": 40 }
+    "461": {
+      "headwayMin": 15,
+      "runMin": 70
+    },
+    "462": {
+      "headwayMin": 30,
+      "runMin": 75
+    },
+    "261": {
+      "headwayMin": 30,
+      "runMin": 55
+    },
+    "500": {
+      "headwayMin": 30,
+      "runMin": 50
+    },
+    "510": {
+      "headwayMin": 20,
+      "runMin": 55
+    },
+    "494": {
+      "headwayMin": 30,
+      "runMin": 45
+    },
+    "250": {
+      "headwayMin": 30,
+      "runMin": 40
+    }
   },
   "relief": [
-    { "id": "R-461-A", "name": "Royal Oak Layover Relief Room", "type": "SMART layover facility", "lat": 42.5196, "lng": -83.1992, "routes": ["461", "462"], "hours": "24 hours", "open24": true, "busPull": "safe", "busPullNote": "Layover bay fits 40 ft and 60 ft buses", "access": "Keypad entry. Code from Dispatch, changes weekly.", "accessible": true },
-    { "id": "R-461-B", "name": "Ferndale Community Center", "type": "Municipal partner (demo)", "lat": 42.4618, "lng": -83.1352, "routes": ["461", "462"], "hours": "6:00 AM – 10:00 PM", "openFrom": 6, "openTo": 22, "busPull": "caution", "busPullNote": "Curb lane only. Short stop, no layover.", "access": "Show SMART ID at front desk", "accessible": true },
-    { "id": "R-461-C", "name": "Birmingham Partner Café", "type": "Business partner (demo)", "lat": 42.5477, "lng": -83.2146, "routes": ["461", "462"], "hours": "6:00 AM – 8:00 PM", "openFrom": 6, "openTo": 20, "busPull": "no", "busPullNote": "No bus parking. Use the Maple layover bay and walk 1 block.", "access": "Restroom by the side entrance, no purchase needed", "accessible": false },
-    { "id": "R-461-D", "name": "8 Mile Layover Relief Point", "type": "SMART layover facility", "lat": 42.4472, "lng": -83.1188, "routes": ["461", "462"], "hours": "24 hours", "open24": true, "busPull": "safe", "busPullNote": "Off-street layover loop", "access": "Keypad entry. Code from Dispatch.", "accessible": true },
-    { "id": "R-461-E", "name": "Main St Fuel & Market", "type": "Business partner (demo)", "lat": 42.5100, "lng": -83.1702, "routes": ["461", "462"], "hours": "24 hours", "open24": true, "busPull": "safe", "busPullNote": "Side lot fits a 40 ft bus. On the 12 Mile detour path.", "access": "Ask cashier for key, show SMART ID", "accessible": true },
-    { "id": "R-500-A", "name": "Mound Rd Partner Pharmacy", "type": "Business partner (demo)", "lat": 42.4325, "lng": -83.0285, "routes": ["500"], "hours": "7:00 AM – 11:00 PM", "openFrom": 7, "openTo": 23, "busPull": "caution", "busPullNote": "Rear lot, enter from 7 Mile only", "access": "Restroom near pharmacy counter", "accessible": true },
-    { "id": "R-500-B", "name": "Bel Air Center Layover Room", "type": "SMART layover facility", "lat": 42.4465, "lng": -83.0220, "routes": ["500", "510"], "hours": "24 hours", "open24": true, "busPull": "safe", "busPullNote": "Layover bays 3–5", "access": "Keypad entry. Code from Dispatch.", "accessible": true },
-    { "id": "R-510-A", "name": "Van Dyke & 14 Mile Partner Diner", "type": "Business partner (demo)", "lat": 42.5345, "lng": -83.0285, "routes": ["510"], "hours": "5:00 AM – 9:00 PM", "openFrom": 5, "openTo": 21, "busPull": "safe", "busPullNote": "Bus-length spot on north side of lot", "access": "No purchase needed, show SMART ID", "accessible": true },
-    { "id": "R-494-A", "name": "Dequindre & 12 Mile Fire Station (demo)", "type": "Municipal partner (demo)", "lat": 42.5055, "lng": -83.0875, "routes": ["494"], "hours": "24 hours", "open24": true, "busPull": "caution", "busPullNote": "Never block apparatus bay. Use street side.", "access": "Ring bell at side door", "accessible": true },
-    { "id": "R-261-A", "name": "Michigan & Telegraph Layover Room", "type": "SMART layover facility", "lat": 42.3005, "lng": -83.2775, "routes": ["261"], "hours": "24 hours", "open24": true, "busPull": "safe", "busPullNote": "Layover lane", "access": "Keypad entry. Code from Dispatch.", "accessible": true },
-    { "id": "R-250-A", "name": "Ford Rd Partner Grocery", "type": "Business partner (demo)", "lat": 42.3305, "lng": -83.2755, "routes": ["250"], "hours": "6:00 AM – 12:00 AM", "openFrom": 6, "openTo": 24, "busPull": "safe", "busPullNote": "Far east edge of lot", "access": "Restroom at back of store", "accessible": true }
+    {
+      "id": "R-HTC",
+      "real": true,
+      "name": "Jason Hargrove Transit Center",
+      "type": "DDOT transit center · operator lounge & restroom",
+      "address": "1121 W 8 Mile Rd, Detroit (Woodward & 8 Mile)",
+      "lat": 42.44333,
+      "lng": -83.11681,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hours": "Indoor building open 24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Bus bays on site. FAST Woodward 461/462 serve this center.",
+      "access": "Dedicated operator lounge and restroom inside, plus public restrooms. DDOT facility: confirm SMART operator access with DDOT.",
+      "accessible": true,
+      "agreement": "DDOT facility · SMART access to confirm",
+      "source": "https://www.bridgedetroit.com/detroits-new-transit-center-at-old-state-fairgrounds-opens-saturday/",
+      "sourceLabel": "BridgeDetroit; City of Detroit"
+    },
+    {
+      "id": "R-DPL",
+      "real": true,
+      "name": "Detroit Public Library – Main",
+      "type": "Public library",
+      "address": "5201 Woodward Ave, Detroit",
+      "lat": 42.3585,
+      "lng": -83.0668,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          13,
+          17
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          10,
+          18
+        ]
+      ],
+      "hours": "Mon 10–6 · Tue–Wed 12–8 · Thu–Sat 10–6 · Sun 1–5",
+      "busPull": "caution",
+      "busPullNote": "On Woodward. Curb stop only, no layover space.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://detroitpubliclibrary.org/locations/main",
+      "sourceLabel": "Detroit Public Library"
+    },
+    {
+      "id": "R-FADL",
+      "real": true,
+      "name": "Ferndale Area District Library",
+      "type": "Public library",
+      "address": "222 E 9 Mile Rd, Ferndale",
+      "lat": 42.4603,
+      "lng": -83.1327,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          12,
+          17
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          12,
+          17
+        ]
+      ],
+      "hours": "Mon–Thu 10–8 · Fri 10–6 · Sat–Sun 12–5",
+      "busPull": "caution",
+      "busPullNote": "Just off Woodward on 9 Mile. Walk-up only, park only where SMART allows.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://www.fadl.org/",
+      "sourceLabel": "Ferndale Area District Library"
+    },
+    {
+      "id": "R-ROTC",
+      "real": true,
+      "name": "SMART Royal Oak Transit Center",
+      "type": "SMART facility",
+      "address": "202 S Sherman Dr, Royal Oak",
+      "lat": 42.48917,
+      "lng": -83.1475,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hours": "Hours to verify",
+      "busPull": "safe",
+      "busPullNote": "SMART transit center bays. About 1 mile east of Woodward.",
+      "access": "SMART-owned building with ticket office. Restroom availability for operators: confirm with SMART.",
+      "accessible": true,
+      "verifyRestroom": true,
+      "agreement": "SMART facility · confirm restroom",
+      "source": "https://en.wikipedia.org/wiki/Royal_Oak_station_(Michigan)",
+      "sourceLabel": "Public station records"
+    },
+    {
+      "id": "R-ROPL",
+      "real": true,
+      "name": "Royal Oak Public Library",
+      "type": "Public library",
+      "address": "222 E 11 Mile Rd, Royal Oak",
+      "lat": 42.49,
+      "lng": -83.142,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        null,
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          9,
+          18
+        ],
+        [
+          9,
+          18
+        ]
+      ],
+      "hours": "Mon–Thu 9–8 · Fri–Sat 9–6 · Sun closed (verify)",
+      "busPull": "no",
+      "busPullNote": "Downtown Royal Oak, off Woodward. Pair with the Royal Oak Transit Center bays.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://oaklandcounty115.com/2022/01/13/royal-oak-library-announces-new-hours/",
+      "sourceLabel": "Oakland County Times (hours may have changed)"
+    },
+    {
+      "id": "R-BPL",
+      "real": true,
+      "name": "Baldwin Public Library",
+      "type": "Public library",
+      "address": "300 W Merrill St, Birmingham",
+      "lat": 42.5468,
+      "lng": -83.2155,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        [
+          9.5,
+          21
+        ],
+        null
+      ],
+      "hours": "Fri 9:30–9 confirmed · other days verify",
+      "busPull": "no",
+      "busPullNote": "Downtown Birmingham, a few blocks off Woodward. Walk-up only.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://www.baldwinlib.org/",
+      "sourceLabel": "Baldwin Public Library"
+    },
+    {
+      "id": "R-TPL",
+      "real": true,
+      "name": "Troy Public Library",
+      "type": "Public library · near north terminal",
+      "address": "510 W Big Beaver Rd, Troy",
+      "lat": 42.5626,
+      "lng": -83.1474,
+      "routes": [
+        "461",
+        "462"
+      ],
+      "hoursByDay": [
+        [
+          13,
+          17
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          21
+        ],
+        [
+          9.5,
+          17
+        ],
+        [
+          9.5,
+          17
+        ]
+      ],
+      "hours": "Mon–Thu 9:30–9 · Fri–Sat 9:30–5 · Sun 1–5",
+      "busPull": "caution",
+      "busPullNote": "Near the Troy Civic Center Park & Ride (Route 461's north end). Walk from the layover.",
+      "access": "Public restrooms during library hours.",
+      "accessible": true,
+      "agreement": "Public building · relief agreement needed",
+      "source": "https://troypl.org/",
+      "sourceLabel": "Troy Public Library"
+    },
+    {
+      "id": "R-500-A",
+      "name": "Mound Rd Partner Pharmacy",
+      "type": "Business partner (demo)",
+      "lat": 42.4325,
+      "lng": -83.0285,
+      "routes": [
+        "500"
+      ],
+      "hours": "7:00 AM – 11:00 PM",
+      "openFrom": 7,
+      "openTo": 23,
+      "busPull": "caution",
+      "busPullNote": "Rear lot, enter from 7 Mile only",
+      "access": "Restroom near pharmacy counter",
+      "accessible": true
+    },
+    {
+      "id": "R-500-B",
+      "name": "Bel Air Center Layover Room",
+      "type": "SMART layover facility",
+      "lat": 42.4465,
+      "lng": -83.022,
+      "routes": [
+        "500",
+        "510"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Layover bays 3–5",
+      "access": "Keypad entry. Code from Dispatch.",
+      "accessible": true
+    },
+    {
+      "id": "R-510-A",
+      "name": "Van Dyke & 14 Mile Partner Diner",
+      "type": "Business partner (demo)",
+      "lat": 42.5345,
+      "lng": -83.0285,
+      "routes": [
+        "510"
+      ],
+      "hours": "5:00 AM – 9:00 PM",
+      "openFrom": 5,
+      "openTo": 21,
+      "busPull": "safe",
+      "busPullNote": "Bus-length spot on north side of lot",
+      "access": "No purchase needed, show SMART ID",
+      "accessible": true
+    },
+    {
+      "id": "R-494-A",
+      "name": "Dequindre & 12 Mile Fire Station (demo)",
+      "type": "Municipal partner (demo)",
+      "lat": 42.5055,
+      "lng": -83.0875,
+      "routes": [
+        "494"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "caution",
+      "busPullNote": "Never block apparatus bay. Use street side.",
+      "access": "Ring bell at side door",
+      "accessible": true
+    },
+    {
+      "id": "R-261-A",
+      "name": "Michigan & Telegraph Layover Room",
+      "type": "SMART layover facility",
+      "lat": 42.3005,
+      "lng": -83.2775,
+      "routes": [
+        "261"
+      ],
+      "hours": "24 hours",
+      "open24": true,
+      "busPull": "safe",
+      "busPullNote": "Layover lane",
+      "access": "Keypad entry. Code from Dispatch.",
+      "accessible": true
+    },
+    {
+      "id": "R-250-A",
+      "name": "Ford Rd Partner Grocery",
+      "type": "Business partner (demo)",
+      "lat": 42.3305,
+      "lng": -83.2755,
+      "routes": [
+        "250"
+      ],
+      "hours": "6:00 AM – 12:00 AM",
+      "openFrom": 6,
+      "openTo": 24,
+      "busPull": "safe",
+      "busPullNote": "Far east edge of lot",
+      "access": "Restroom at back of store",
+      "accessible": true
+    }
   ],
   "detourTemplates": [
     {
       "id": "DT-461-12M",
-      "routes": ["461", "462"],
+      "routes": [
+        "461",
+        "462"
+      ],
       "direction": "Northbound",
-      "match": ["woodward", "12 mile", "twelve mile", "13 mile"],
+      "match": [
+        "woodward",
+        "12 mile",
+        "twelve mile",
+        "13 mile"
+      ],
       "closure": "Woodward closed northbound between 12 Mile and 13 Mile",
-      "closedPath": [[42.5050, -83.1790], [42.5120, -83.1885], [42.5190, -83.1980]],
-      "detourPath": [[42.5050, -83.1790], [42.5050, -83.1700], [42.5190, -83.1700], [42.5190, -83.1980]],
+      "closedPath": [
+        [
+          42.505,
+          -83.179
+        ],
+        [
+          42.512,
+          -83.1885
+        ],
+        [
+          42.519,
+          -83.198
+        ]
+      ],
+      "detourPath": [
+        [
+          42.505,
+          -83.179
+        ],
+        [
+          42.505,
+          -83.17
+        ],
+        [
+          42.519,
+          -83.17
+        ],
+        [
+          42.519,
+          -83.198
+        ]
+      ],
       "steps": [
-        { "text": "Turn right (east) on 12 Mile", "at": "Woodward & 12 Mile" },
-        { "text": "Left (north) on Main St", "at": "12 Mile & Main St" },
-        { "text": "Left (west) on 13 Mile", "at": "Main St & 13 Mile" },
-        { "text": "Right on Woodward. Rejoin route at Stop 1301", "at": "Woodward & 13 Mile" }
+        {
+          "text": "Turn right (east) on 12 Mile",
+          "at": "Woodward & 12 Mile"
+        },
+        {
+          "text": "Left (north) on Main St",
+          "at": "12 Mile & Main St"
+        },
+        {
+          "text": "Left (west) on 13 Mile",
+          "at": "Main St & 13 Mile"
+        },
+        {
+          "text": "Right on Woodward. Rejoin route at Stop 1301",
+          "at": "Woodward & 13 Mile"
+        }
       ],
       "fromStop": "1204",
       "rejoinStop": "1301",
-      "bypassed": ["Woodward & Lincoln (NB)", "Woodward & 11th St (NB)", "Woodward & Catalpa (NB)"],
-      "temporary": ["Main St & 12 Mile (temporary)", "Main St & 13 Mile (temporary)"],
+      "bypassed": [
+        "Woodward & Lincoln (NB)",
+        "Woodward & 11th St (NB)",
+        "Woodward & Catalpa (NB)"
+      ],
+      "temporary": [
+        "Main St & 12 Mile (temporary)",
+        "Main St & 13 Mile (temporary)"
+      ],
       "delayMin": 7
     },
     {
       "id": "DT-510-12M",
-      "routes": ["510"],
+      "routes": [
+        "510"
+      ],
       "direction": "Northbound",
-      "match": ["van dyke", "12 mile", "twelve mile"],
+      "match": [
+        "van dyke",
+        "12 mile",
+        "twelve mile"
+      ],
       "closure": "Van Dyke closed northbound at 12 Mile (water main)",
-      "closedPath": [[42.5040, -83.0270], [42.5190, -83.0275], [42.5340, -83.0280]],
-      "detourPath": [[42.5040, -83.0270], [42.5040, -83.0420], [42.5340, -83.0420], [42.5340, -83.0280]],
+      "closedPath": [
+        [
+          42.504,
+          -83.027
+        ],
+        [
+          42.519,
+          -83.0275
+        ],
+        [
+          42.534,
+          -83.028
+        ]
+      ],
+      "detourPath": [
+        [
+          42.504,
+          -83.027
+        ],
+        [
+          42.504,
+          -83.042
+        ],
+        [
+          42.534,
+          -83.042
+        ],
+        [
+          42.534,
+          -83.028
+        ]
+      ],
       "steps": [
-        { "text": "Turn left (west) on 12 Mile", "at": "Van Dyke & 12 Mile" },
-        { "text": "Right (north) on Ryan Rd", "at": "12 Mile & Ryan" },
-        { "text": "Right (east) on 14 Mile", "at": "Ryan & 14 Mile" },
-        { "text": "Left on Van Dyke. Rejoin route at Stop 940", "at": "Van Dyke & 14 Mile" }
+        {
+          "text": "Turn left (west) on 12 Mile",
+          "at": "Van Dyke & 12 Mile"
+        },
+        {
+          "text": "Right (north) on Ryan Rd",
+          "at": "12 Mile & Ryan"
+        },
+        {
+          "text": "Right (east) on 14 Mile",
+          "at": "Ryan & 14 Mile"
+        },
+        {
+          "text": "Left on Van Dyke. Rejoin route at Stop 940",
+          "at": "Van Dyke & 14 Mile"
+        }
       ],
       "fromStop": "918",
       "rejoinStop": "940",
-      "bypassed": ["Van Dyke & Martin (NB)", "Van Dyke & 13 Mile (NB)"],
-      "temporary": ["Ryan & 13 Mile (temporary)"],
+      "bypassed": [
+        "Van Dyke & Martin (NB)",
+        "Van Dyke & 13 Mile (NB)"
+      ],
+      "temporary": [
+        "Ryan & 13 Mile (temporary)"
+      ],
       "delayMin": 6
     }
   ]

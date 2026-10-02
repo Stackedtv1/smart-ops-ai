@@ -7,6 +7,7 @@ import { stopById, routeById } from '../services/maps.js';
 import {
   operatorPosition, reliefFor, activeDetourFor, nextStops, openLostForBus, driverResponse, driverFoundItem,
   inboxFor, sendMessage, createFieldReport, FIELD_KINDS, terminalName, vehicleOf, isMoving, RELIEF,
+  reliefClock, markBreak, routeReliefStrip, directionsOf, routeRunMin, routeEnds,
 } from '../services/ops.js';
 import { Icon, readPhoto } from '../components/ui.jsx';
 import OpsMap from '../components/OpsMap.jsx';
@@ -24,38 +25,58 @@ export function OperatorRelief() {
   const pos = operatorPosition();
   const list = useMemo(() => reliefFor({ route: pos.route, lat: pos.lat, lng: pos.lng, ops, f: pos.f, dir: pos.dir }), [ops]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sel, setSel] = useState(null);
+  const [sent, setSent] = useState(null);
   const detour = activeDetourFor(ops, pos.route);
   const best = list.find((r) => r.usable && r.ahead) || list.find((r) => r.usable);
   const cur = list.find((r) => r.id === sel) || best;
-  const fit = [[pos.lat, pos.lng], ...list.slice(0, 4).map((r) => [r.lat, r.lng])];
+  const clock = reliefClock(ops, OPERATOR.bus);
+  const hrs = `${Math.floor(clock.minutes / 60)} hr ${clock.minutes % 60} min`;
+  const fit = [[pos.lat, pos.lng], ...list.filter((r) => r.ahead !== false).slice(0, 3).map((r) => [r.lat, r.lng])];
 
   return (
     <OperatorShell title="Restroom / Relief" back="/operator">
       <StoppedOnly what="Relief Finder">
-        <div className="stack-sm" style={{ gap: 4 }}>
-          <h2 className="display" style={{ fontSize: 26 }}>Operator Relief Points</h2>
-          <div className="small muted">Approved, bus-friendly locations on or near Route {pos.route}. Not random public restrooms.</div>
+        <div className={`relief-clock ${clock.minutes >= 90 ? 'long' : ''}`}>
+          <span className="eyebrow">Since your last break</span>
+          <b className="num">{hrs}</b>
+          <span className="small">{clock.minutes >= 90 ? 'Long stretch on the route. ' : ''}No need to deadhead back to the terminal. Here are real stops along Route {pos.route}.</span>
         </div>
+
         {detour && <div className="notice notice-warn"><b>Detour active.</b> Relief points recalculated for the detour path.</div>}
+
         {best && (
           <div className="relief-best">
-            <span className="eyebrow">Closest available</span>
-            <b style={{ fontSize: 18 }}>{best.name}</b>
-            <span className="small">{best.miles.toFixed(1)} mi ahead · about {best.mins} min · {best.busPullNote}</span>
+            <span className="eyebrow">Best option ahead</span>
+            <b style={{ fontSize: 19 }}>{best.name}</b>
+            <span className="small">{best.miles.toFixed(1)} mi ahead · about {best.mins} min · {best.status.label}</span>
+            <span className="small">{best.access}</span>
+            <div className="row wrap" style={{ gap: 8, marginTop: 6 }}>
+              <button className="btn btn-primary" onClick={() => go(`/operator/navigate?to=${best.id}`)}><Icon name="nav" size={16} /> Navigate</button>
+              <button className="btn" onClick={() => { sendMessage({ to: { kind: 'dispatch' }, from: `Bus ${OPERATOR.bus} · Route ${OPERATOR.route}`, fromKind: 'operator', fromBus: OPERATOR.bus, text: `Taking a relief break at ${best.name} (${best.address}).` }); setSent(best.name); }}>Tell dispatch</button>
+            </div>
+            {sent && <span className="small" style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ Dispatch knows you're stopping at {sent}.</span>}
           </div>
         )}
-        <OpsMap routes={[pos.route]} relief={list} you={pos} fit={fit} detours={detour ? [detour] : []} height={250} label="Relief points map" legend={false} />
+
+        <RouteReliefStrip route={pos.route} pos={pos} ops={ops} />
+
+        <OpsMap routes={[pos.route]} relief={list} you={pos} fit={fit} detours={detour ? [detour] : []} height={240} label="Relief points map" legend={false} />
         <div className="stack-sm">
           {list.map((r) => <ReliefRow key={r.id} r={r} active={cur?.id === r.id} onPick={() => setSel(r.id)} />)}
         </div>
         {cur && (
           <section className="panel panel-b stack-sm">
-            <b style={{ fontSize: 17 }}>{cur.name}</b>
+            <div className="row between" style={{ gap: 8 }}>
+              <b style={{ fontSize: 17 }}>{cur.name}</b>
+              {cur.real && <span className="rt rt-real">Real location</span>}
+            </div>
             <dl className="kv">
+              {cur.address && <><dt>Address</dt><dd>{cur.address}</dd></>}
               <dt>Hours</dt><dd>{cur.hours}</dd>
               <dt>Bus pull-in</dt><dd>{cur.busPullNote}</dd>
               <dt>Access</dt><dd>{cur.access}</dd>
               <dt>Type</dt><dd>{cur.type}</dd>
+              {cur.agreement && <><dt>Status</dt><dd>{cur.agreement}</dd></>}
               <dt>Accessible</dt><dd>{cur.accessible ? 'Yes' : 'No'}</dd>
             </dl>
             {cur.status.reports.length > 0 && (
@@ -65,16 +86,52 @@ export function OperatorRelief() {
             )}
             <div className="row wrap" style={{ gap: 8 }}>
               <button className="btn btn-primary" onClick={() => go(`/operator/navigate?to=${cur.id}`)}><Icon name="nav" size={16} /> Navigate</button>
-              <button className="btn" onClick={() => sendMessage({ to: { kind: 'dispatch' }, from: `Bus ${OPERATOR.bus} · Route ${OPERATOR.route}`, fromKind: 'operator', fromBus: OPERATOR.bus, text: `Requesting relief break at ${cur.name}.` })}>Notify dispatch</button>
+              <button className="btn" onClick={() => { markBreak(OPERATOR.bus); setSent(null); }}>I took my break</button>
               <button className="btn" onClick={() => go(`/operator/field?relief=${cur.id}`)}>Report a problem</button>
             </div>
+            {cur.source && <span className="xs muted">Source: <a href={cur.source} target="_blank" rel="noreferrer">{cur.sourceLabel || 'public listing'}</a></span>}
           </section>
         )}
-        <p className="xs muted">Relief points and partner businesses are simulated. In production SMART supplies its approved operator relief list, and operator reports keep it current.</p>
+        <p className="xs muted">Route {pos.route} locations are real public places, with addresses and hours from public sources. Hours can change. Operator use still needs SMART agreements and on-site checks. Bus position and other routes' points are simulated.</p>
       </StoppedOnly>
     </OperatorShell>
   );
 }
+
+// The whole route as one line: where relief exists, where the operator is,
+// and how long the gaps are. Shows why a driver on a 2-hour stretch needs this.
+function RouteReliefStrip({ route, pos, ops }) {
+  const pts = routeReliefStrip(route, ops).filter((r) => r.offM < 3500);
+  const run = pts.length ? Math.max(...pts.map((p) => p.atMin), 60) : 60;
+  const [fwd] = directionsOf(route);
+  const youF = pos.f;
+  const ahead = pts.filter((p) => (pos.dir === fwd ? p.f > youF : p.f < youF) && p.status.code === 'open');
+  const nextMin = ahead.length ? Math.round(Math.abs((pos.dir === fwd ? ahead[0].f : ahead[ahead.length - 1].f) - youF) * routeRunMin(route)) : null;
+  const ends = routeEnds(route);
+  return (
+    <section className="panel panel-b stack-sm">
+      <div className="row between"><b>Relief along Route {route}</b><span className="xs muted">{ends[0]} → {ends[1]}</span></div>
+      <div className="rstrip" role="img" aria-label={`Route ${route} relief points`}>
+        <span className="rstrip-line" />
+        {pts.map((p, i) => (
+          <span key={p.id} className={`rstrip-pt rs-${p.status.code}`} style={{ left: `${p.f * 100}%`, top: i % 2 ? 36 : 14 }} title={`${p.name} · ${p.status.label}`}>{i + 1}</span>
+        ))}
+        <span className="rstrip-you" style={{ left: `${youF * 100}%` }}><span>You</span></span>
+      </div>
+      <div className="xs muted">
+        {nextMin != null ? <>Next open relief ahead in about <b style={{ color: 'var(--ink)' }}>{Math.max(1, nextMin)} min</b>. </> : 'No open relief ahead on this trip. '}
+        Without this list, the nearest guaranteed restroom is often the terminal at the end of the line.
+      </div>
+      <ol className="rstrip-list xs">
+        {pts.map((p) => <li key={p.id} className={`rs-${p.status.code}`}><b>{shortName(p.name)}</b> · {p.status.label}</li>)}
+      </ol>
+      <div className="rstrip-key xs"><span><i className="rs-open" />Open now</span><span><i className="rs-verify" />Verify</span><span><i className="rs-hours" />Closed now</span></div>
+    </section>
+  );
+}
+
+const SHORT = { 'Jason Hargrove Transit Center': 'Hargrove TC', 'Detroit Public Library – Main': 'Detroit Library', 'Ferndale Area District Library': 'Ferndale Library', 'SMART Royal Oak Transit Center': 'Royal Oak TC', 'Royal Oak Public Library': 'Royal Oak Library', 'Baldwin Public Library': 'Birmingham Library', 'Troy Public Library': 'Troy Library' };
+const shortName = (n) => SHORT[n] || n;
 
 // ---------------------------------------------------------------------------
 // NAVIGATION (route-aware, detour-aware)
@@ -295,7 +352,7 @@ export function OperatorDispatch() {
 // ---------------------------------------------------------------------------
 const SCRIPTS = [
   ['Road blocked', 'Police have Woodward closed northbound at 12 Mile. Can’t get through.'],
-  ['Restroom closed', 'Restroom at the Royal Oak layover room is locked, keypad not working.'],
+  ['Restroom closed', 'Restroom at the library is closed today, door locked.'],
   ['Construction', 'Construction crew working on Woodward near 10 Mile, right lane closed.'],
   ['Safe bus parking', 'Safe spot to park a 40 foot bus behind the Main St market, plenty of room.'],
   ['Stop inaccessible', 'Stop at Woodward and 9 Mile is blocked by a parked truck, can’t deploy the ramp.'],

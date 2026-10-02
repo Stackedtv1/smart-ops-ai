@@ -712,3 +712,25 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .custody-steps li.done { color: var(--ink); }
 .custody-steps li.done .dot { background: var(--ok); color: #fff; }
 .custody-steps li.cur { border-color: var(--ok); }
+
+/* Relief clock + route strip */
+.relief-clock { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+.relief-clock b { font-family: var(--font-display); font-size: 34px; line-height: 1; }
+.relief-clock.long { background: var(--med-soft); border-color: color-mix(in srgb, var(--med) 40%, transparent); }
+.relief-clock.long b { color: var(--med); }
+.rt-real { background: var(--accent-soft); color: var(--accent); }
+.rt-verify { background: var(--low-soft); color: var(--low); }
+.rstrip { position: relative; height: 62px; margin: 4px 12px 0; }
+.rstrip-line { position: absolute; left: 0; right: 0; top: 30px; height: 6px; border-radius: 99px; background: #1d6fd1; opacity: .8; }
+.rstrip-pt { position: absolute; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; border: 2px solid var(--surface); background: var(--ok); color: #fff; font-size: 11px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 1px var(--line-strong); z-index: 1; }
+.rstrip-pt.rs-verify { background: var(--low); }
+.rstrip-pt.rs-hours, .rstrip-pt.rs-closed { background: var(--muted); }
+.rstrip-lbl { position: absolute; left: 50%; transform: translateX(-50%) rotate(-28deg); transform-origin: left bottom; bottom: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; color: var(--ink-2); }
+.rstrip-you { position: absolute; top: 14px; width: 4px; height: 42px; margin-left: -2px; background: var(--ink); border-radius: 2px; }
+.rstrip-you span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 900; background: var(--ink); color: var(--surface); padding: 0 5px; border-radius: 4px; }
+.rstrip-key { display: flex; gap: 12px; color: var(--ink-2); font-weight: 600; }
+.rstrip-key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.rstrip-key i.rs-open { background: var(--ok); } .rstrip-key i.rs-verify { background: var(--low); } .rstrip-key i.rs-hours { background: var(--muted); }
+
+.rstrip-list { margin: 0; padding-left: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; color: var(--ink-2); }
+.rstrip-list li.rs-open b { color: var(--ok); }
