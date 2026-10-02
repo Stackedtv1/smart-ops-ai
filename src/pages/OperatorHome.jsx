@@ -5,8 +5,7 @@ import { useStore, isOpen } from '../services/store.js';
 import { startOfDay } from '../lib/time.js';
 import { isMoving, activeDetourFor, unackedFor, openLostForBus, createFieldReport, operatorPosition, ackDetour } from '../services/ops.js';
 import { Icon } from '../components/ui.jsx';
-import { MessageCard, LostAlertCard, DetourSummary } from '../components/OpsWidgets.jsx';
-import OpsMap from '../components/OpsMap.jsx';
+import { MessageCard, LostAlertCard } from '../components/OpsWidgets.jsx';
 import OperatorShell from './OperatorShell.jsx';
 import { speak, oneTapDispatch } from './OperatorNavigate.jsx';
 
@@ -24,18 +23,14 @@ function Assist({ icon, label, sub, tone, badge, onClick, live }) {
 // Full-screen takeover the moment Dispatch publishes a detour for this route.
 function DetourTakeover({ detour }) {
   const { go } = useNav();
-  useEffect(() => { speak(`Detour active on Route ${detour.routes[0]}. ${detour.closure}. Follow the highlighted route.`); }, [detour.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { speak(`Detour active on Route ${detour.routes[0]}. Follow navigation. Plus ${detour.delayMin} minutes.`); }, [detour.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="takeover" role="dialog" aria-modal="true" aria-label="Detour active">
-      <div className="takeover-card">
-        <div className="detour-h"><span className="detour-tag" style={{ fontSize: 14 }}>DETOUR ACTIVE</span><span className="mono xs">{detour.id}</span></div>
-        <div className="display" style={{ fontSize: 26, lineHeight: 1.05 }}>Follow the highlighted route</div>
-        <div className="small" style={{ fontWeight: 700 }}>{detour.closure}</div>
-        <div>
-          <DetourSummary d={detour} />
-          <OpsMap routes={[OPERATOR.route]} detours={[detour]} fit={[...detour.detourPath, ...detour.closedPath]} height={210} label="Detour map" legend={false} />
-        </div>
-        <div className="small"><b>First turn:</b> {detour.steps[0].text} at {detour.steps[0].at}</div>
+      <div className="takeover-card simple">
+        <div className="tk-warn">⚠ DETOUR ACTIVE</div>
+        <div className="tk-main">Follow navigation</div>
+        <div className="tk-sub">+{detour.delayMin} min • {detour.bypassed.length} stops bypassed</div>
+        <div className="tk-why">{detour.closure}</div>
         <button className="bigack" onClick={() => { ackDetour(detour.id, OPERATOR.bus); speak('Detour acknowledged.'); go('/operator/navigate'); }}>ACKNOWLEDGE</button>
       </div>
     </div>

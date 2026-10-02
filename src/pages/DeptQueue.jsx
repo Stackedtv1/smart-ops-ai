@@ -59,24 +59,38 @@ export default function DeptQueue({ dept }) {
 
       <div className="queue-grid">
         <section className="panel">
-          <div className="panel-h"><h2>Open jobs</h2><span className="tag">{open.length}</span></div>
-          <div>
-            {open.map((t) => (
+          {(() => {
+            const row = (t) => (
               <button key={t.id} className={`job ${sel?.id === t.id ? 'sel' : ''}`} onClick={() => setSelId(t.id)}>
-                <span className="sev" style={{ background: PRIORITY_COLOR[t.priority] }} />
+                <span className="sev" style={{ background: t.status === 'Resolved' ? 'var(--ok)' : PRIORITY_COLOR[t.priority] }} />
                 <span className="grow">
                   <span className="row between" style={{ alignItems: 'flex-start' }}>
                     <span style={{ fontWeight: 800 }}>{t.ai.title}{now - t.createdAt < 120000 && t.live && <span className="new-badge">NEW</span>}</span>
                     <StatusPill s={t.status} />
                   </span>
                   <span className="small muted" style={{ display: 'block' }}>
-                    {t.ai.category === 'facilities' ? `Stop ${t.stopId} · ${stopById(t.stopId)?.name}` : `Bus ${t.vehicle} · Route ${t.route}`} · {ago(t.createdAt, now)}
+                    {t.ai.category === 'facilities' ? `Stop ${t.stopId} · ${stopById(t.stopId)?.name}` : `Bus ${t.vehicle} · Route ${t.route}`} · {ago(t.createdAt, now)}{t.assignee ? ` · ${t.assignee}` : ''}
                   </span>
                 </span>
               </button>
-            ))}
-            {!open.length && <div className="panel-b muted">Queue clear.</div>}
-          </div>
+            );
+            const high = open.filter((t) => t.priority === 'high');
+            const mineList = open.filter((t) => t.priority !== 'high' && t.assignee === c.tech);
+            const rest = open.filter((t) => t.priority !== 'high' && t.assignee !== c.tech);
+            const groups = [
+              ['High Priority', high, 'var(--high)'],
+              ['Assigned to Me', mineList, 'var(--accent)'],
+              ['Open Jobs', rest, 'var(--line-strong)'],
+              ['Completed Today', doneToday, 'var(--ok)'],
+            ];
+            return groups.map(([label, list, color]) => (
+              <div key={label} className="qgroup">
+                <div className="qgroup-h" style={{ borderLeftColor: color }}><b>{label}</b><span className="tag">{list.length}</span></div>
+                {list.map(row)}
+                {!list.length && <div className="xs muted" style={{ padding: '6px 16px 10px' }}>None</div>}
+              </div>
+            ));
+          })()}
         </section>
 
         <section className="panel">

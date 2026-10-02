@@ -41,9 +41,12 @@ export function Screen({ compact }) {
   if (path === '/operator/lost') return <OperatorLost />;
   if (path === '/operator/dispatch') return <OperatorDispatch />;
   if (path.startsWith('/operator/field')) return <OperatorField key={path} kind={qs(path).get('kind')} relief={qs(path).get('relief')} />;
-  if (path === '/dispatch') return <DispatchHub />;
+  if (path === '/dispatch') return <DispatchHub key="home" view="home" />;
+  if (path === '/dispatch/map') return <DispatchHub key="map" view="map" />;
+  if (path === '/dispatch/messages') return <DispatchHub key="messages" view="messages" />;
   if (path === '/terminal') return <Terminal />;
   if ((m = match('/terminal/:id', path))) return <Terminal key={path} id={m.id} />;
+  if ((m = match('/terminal/:id/:view', path))) return <Terminal key={path} id={m.id} view={m.view} />;
   if (path === '/lost-found') return <LostFound />;
   if (path === '/dashboard') return <Dashboard compact={compact} />;
   if ((m = match('/ticket/:id', path))) return <TicketDetail key={path} id={m.id} />;

@@ -8,7 +8,7 @@ import OpsMap from './OpsMap.jsx';
 import { DetourSummary } from './OpsWidgets.jsx';
 import { Modal } from './ui.jsx';
 
-const STEPS = ['Closure', 'Route', 'Closed section', 'Bus-safe detour', 'Publish'];
+const STEPS = ['Location', 'Review', 'Publish'];
 
 // Dispatch detour workflow: road closure → affected route → closed section →
 // SMART Ops generates a bus-safe detour → Publish to everyone at once.
@@ -20,7 +20,8 @@ export default function DetourPlanner({ report = null, onClose }) {
   const [route, setRoute] = useState(tpl?.routes[0] || routes[0] || null);
   const [from, setFrom] = useState(tpl?.fromStop || null);
   const [to, setTo] = useState(tpl?.rejoinStop || null);
-  const [phase, setPhase] = useState(tpl ? 'segment' : 'closure');
+  const [phase, setPhase] = useState(tpl ? 'generate' : 'closure');
+  const openReports = useStore((s) => s.ops.field.filter((f) => f.kind === 'road_blocked' && f.status === 'Open'));
   const [shown, setShown] = useState(0);
   const [published, setPublished] = useState(null);
   const live = useStore((s) => (published ? s.ops.detours.find((d) => d.id === published) : null));
@@ -48,7 +49,7 @@ export default function DetourPlanner({ report = null, onClose }) {
     return () => clearInterval(id);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const stepIdx = { closure: 0, route: 1, segment: 2, generate: 3, review: 3, done: 4 }[phase];
+  const stepIdx = { closure: 0, route: 0, segment: 1, generate: 1, review: 1, done: 2 }[phase];
   const recipients = plan ? [...new Set(plan.routes.flatMap((r) => busesOnRoute(r)))] : [];
   const terms = [...new Set(recipients.map((b) => vehicleOf(b)?.garage).filter(Boolean))];
 
@@ -60,7 +61,7 @@ export default function DetourPlanner({ report = null, onClose }) {
 
   const footer = phase === 'review' ? (
     <>
-      <button className="btn" onClick={() => setPhase('segment')}>Change section</button>
+      <button className="btn" onClick={() => setPhase('segment')}>Adjust closed section</button>
       <button className="btn btn-primary btn-lg" onClick={publish}>Publish detour to {recipients.length} buses</button>
     </>
   ) : phase === 'done' ? <button className="btn btn-primary" onClick={onClose}>Done</button> : <button className="btn" onClick={onClose}>Cancel</button>;
@@ -81,10 +82,19 @@ export default function DetourPlanner({ report = null, onClose }) {
       {phase === 'closure' && (
         <div className="stack-sm">
           <b>Where is the road closed?</b>
-          <span className="small muted">Dispatch got a call or saw it on the camera. Pick the closure.</span>
+          {openReports.length > 0 && <span className="eyebrow">Reported by operators</span>}
+          {openReports.map((f) => {
+            const t = suggestDetour(f.text, f.route);
+            return t ? (
+              <button key={f.id} className="btn btn-block closure-pick hot" onClick={() => { setTplId(t.id); setPhase('generate'); }}>
+                <b>{t.closure}</b><span>Bus {f.bus} · {fmtTime(f.at)} · “{f.text}”</span>
+              </button>
+            ) : null;
+          })}
+          <span className="eyebrow">Known closure locations</span>
           {DETOUR_TEMPLATES.map((t) => (
-            <button key={t.id} className="btn btn-block" style={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => { setTplId(t.id); setPhase('route'); }}>
-              {t.closure} · Routes {t.routes.join('/')}
+            <button key={t.id} className="btn btn-block closure-pick" onClick={() => { setTplId(t.id); setPhase('generate'); }}>
+              <b>{t.closure}</b><span>Routes {t.routes.join('/')} · SMART Ops builds the bus-safe detour</span>
             </button>
           ))}
         </div>
@@ -109,7 +119,7 @@ export default function DetourPlanner({ report = null, onClose }) {
             <div className="field"><label>Closed from</label><select className="select" value={from || ''} onChange={(e) => setFrom(e.target.value)}>{stops.map((s) => <option key={s.id} value={s.demoId || s.id}>{s.name}</option>)}</select></div>
             <div className="field"><label>To (rejoin)</label><select className="select" value={to || ''} onChange={(e) => setTo(e.target.value)}>{stops.map((s) => <option key={s.id} value={s.demoId || s.id}>{s.name}</option>)}</select></div>
           </div>
-          <button className="btn btn-primary btn-lg" disabled={!from || !to || from === to} onClick={() => setPhase('generate')}>Generate bus-safe detour</button>
+          <button className="btn btn-primary btn-lg" disabled={!from || !to || from === to} onClick={() => setPhase('generate')}>Rebuild detour</button>
         </div>
       )}
 
