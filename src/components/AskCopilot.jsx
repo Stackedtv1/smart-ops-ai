@@ -19,7 +19,7 @@ export default function AskCopilot({ tall = false }) {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const endRef = useRef(null);
-  useEffect(() => endRef.current?.scrollIntoView({ block: 'nearest' }), [msgs]);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'nearest' }); }, [msgs]);
 
   async function ask(question) {
     const text = question.trim();

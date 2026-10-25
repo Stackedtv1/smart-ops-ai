@@ -18,7 +18,7 @@ export default function AskFab() {
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const end = useRef(null);
-  useEffect(() => end.current?.scrollIntoView({ block: 'nearest' }), [log, busy]);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [log, busy]);
 
   function ask(text, mode = 'typed') {
     const question = (text ?? q).trim();

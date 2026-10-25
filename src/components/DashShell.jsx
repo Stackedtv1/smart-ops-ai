@@ -141,6 +141,14 @@ export default function DashShell({ active, children, compact }) {
   const nav = navFor(role || 'dispatch', cur);
   const [moreOpen, setMoreOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
+  // Menus close on a tap outside (touch has no mouse-leave) or Escape.
+  const closeMenus = () => { setMoreOpen(false); setRolesOpen(false); setMenu(false); };
+  useEffect(() => {
+    const k = (e) => { if (e.key === 'Escape') closeMenus(); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
+  useEffect(() => { closeMenus(); }, [path]);
   const moreOn = (nav.more || []).find((t) => t.on(cur));
   // Tab badges: things that are waiting on a person.
   const badges = useStore((st) => ({
@@ -151,7 +159,7 @@ export default function DashShell({ active, children, compact }) {
   const liveLabel = { live: 'Live · shared across every screen', connecting: 'Connecting to live data…', offline: 'Offline · this device only', local: 'Demo · this browser' }[liveStatus] || 'Demo';
   return (
     <div className="dash">
-      <header className="dash-top">
+      <header className={`dash-top${moreOpen || rolesOpen || menu ? ' menus-open' : ''}`}>
         <div className="inner">
           <div className="dash-brand">
             <span className="name">SMART OPS AI</span>
@@ -160,11 +168,11 @@ export default function DashShell({ active, children, compact }) {
           <DemoFlag />
           {!compact && (
             <div style={{ position: 'relative' }}>
-              <button className="role-chip role-btn" onClick={() => setRolesOpen((o) => !o)} aria-expanded={rolesOpen} aria-haspopup="menu">
+              <button className="role-chip role-btn" onClick={() => { setMoreOpen(false); setMenu(false); setRolesOpen((o) => !o); }} aria-expanded={rolesOpen} aria-haspopup="menu">
                 {ROLE_LABEL[role || 'dispatch']} ▾
               </button>
               {rolesOpen && (
-                <div className="role-menu" role="menu" onMouseLeave={() => setRolesOpen(false)}>
+                <div className="role-menu" role="menu">
                   <div className="xs muted" style={{ padding: '4px 10px 6px', fontWeight: 800, letterSpacing: '.06em' }}>SWITCH SCREEN</div>
                   <button role="menuitem" onClick={() => { setRolesOpen(false); setRole(null); go('/operator'); }}><Icon name="bus" size={18} /> Operator</button>
                   {Object.entries(NAV).map(([k, v]) => (
@@ -180,7 +188,7 @@ export default function DashShell({ active, children, compact }) {
           {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
           <div style={{ position: 'relative' }}>
-            <button className="btn btn-sm" onClick={() => setMenu((m) => !m)} aria-expanded={menu}>Demo ▾</button>
+            <button className="btn btn-sm" onClick={() => { setMoreOpen(false); setRolesOpen(false); setMenu((m) => !m); }} aria-expanded={menu}>Demo ▾</button>
             {menu && (
               <div className="panel" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', width: 250, zIndex: 40, boxShadow: 'var(--shadow)', color: 'var(--ink)' }}>
                 <div className="stack-sm" style={{ padding: 8 }}>
@@ -206,15 +214,16 @@ export default function DashShell({ active, children, compact }) {
               </a>
             ))}
             {nav.more?.length > 0 && (
-              <a href="#more" className={moreOn ? 'on' : ''} onClick={(e) => { e.preventDefault(); setMoreOpen((m) => !m); }} aria-expanded={moreOpen}>
+              <a href="#more" className={moreOn ? 'on' : ''} onClick={(e) => { e.preventDefault(); setRolesOpen(false); setMenu(false); setMoreOpen((m) => !m); }} aria-expanded={moreOpen}>
                 <Icon name="dots" size={16} />{moreOn ? moreOn.label : 'More'} ▾
               </a>
             )}
           </nav>
         )}
       </header>
+      {(moreOpen || rolesOpen || menu) && <div className="menu-backdrop" onClick={closeMenus} aria-hidden="true" />}
       {moreOpen && (
-        <div className="more-menu" role="menu" onMouseLeave={() => setMoreOpen(false)}>
+        <div className="more-menu" role="menu">
           {nav.more.map((t) => <button key={t.to} role="menuitem" className={t.on(cur) ? 'on' : ''} onClick={() => { setMoreOpen(false); go(t.to); }}>{t.label}</button>)}
         </div>
       )}

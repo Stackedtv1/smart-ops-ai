@@ -862,3 +862,7 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .role-menu button { display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; background: none; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--ink); text-align: left; }
 .role-menu button:hover { background: var(--bg); }
 .role-menu button.on { background: var(--accent); color: var(--accent-ink, #fff); }
+
+.menu-backdrop { position: fixed; inset: 0; z-index: 44; background: transparent; }
+.dash-top.menus-open { z-index: 47; }
+.more-menu { z-index: 48; }
