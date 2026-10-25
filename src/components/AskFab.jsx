@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNav } from '../lib/router.jsx';
 import { useRole } from '../lib/role.js';
 import { askSmartOps, SUGGEST } from '../services/ask.js';
+import { createTicket } from '../services/store.js';
 import { Icon } from './ui.jsx';
 
 const SR = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
@@ -19,13 +20,13 @@ export default function AskFab() {
   const end = useRef(null);
   useEffect(() => end.current?.scrollIntoView({ block: 'nearest' }), [log, busy]);
 
-  function ask(text) {
+  function ask(text, mode = 'typed') {
     const question = (text ?? q).trim();
     if (!question) return;
     setQ('');
     setBusy(true);
     setTimeout(() => {
-      setLog((l) => [...l.slice(-3), { q: question, a: askSmartOps(question) }]);
+      setLog((l) => [...l.slice(-3), { q: question, a: askSmartOps(question, mode) }]);
       setBusy(false);
     }, 380);
   }
@@ -34,7 +35,7 @@ export default function AskFab() {
     if (!SR) return;
     const rec = new SR();
     rec.lang = 'en-US';
-    rec.onresult = (e) => ask(e.results[0][0].transcript);
+    rec.onresult = (e) => ask(e.results[0][0].transcript, 'voice');
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
     setListening(true);
@@ -60,11 +61,11 @@ export default function AskFab() {
               <div key={i} className="ask-turn">
                 <div className="ask-q">{x.q}</div>
                 <div className="ask-a">
-                  <div style={{ whiteSpace: 'pre-line', fontWeight: 600 }}>{x.a.text}</div>
+                  <div style={{ whiteSpace: 'pre-line', fontWeight: 600, ...(x.a.alert ? { color: 'var(--danger, #b42318)' } : {}) }}>{x.a.text}</div>
                   {x.a.list?.length > 0 && <ul>{x.a.list.map((l, j) => <li key={j}>{l}</li>)}</ul>}
                   {x.a.actions?.length > 0 && (
                     <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
-                      {x.a.actions.map((a) => <button key={a.to + a.label} className={`btn btn-sm ${a.primary ? 'btn-primary' : ''}`} onClick={() => { setOpen(false); go(a.to); }}>{a.label}</button>)}
+                      {x.a.actions.map((a) => <button key={(a.to || 'create') + a.label} className={`btn btn-sm ${a.primary ? 'btn-primary' : ''}`} onClick={() => { if (a.create && !a.ticketId) a.ticketId = createTicket(a.create).id; const to = a.create ? `/ticket/${a.ticketId}` : a.to; setOpen(false); go(to); }}>{a.label}</button>)}
                     </div>
                   )}
                 </div>

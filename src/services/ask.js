@@ -3,6 +3,8 @@
 import { getState, isOpen, patternAlerts } from './store.js';
 import { searchOps } from './ops.js';
 import { answerLocal } from './copilot.js';
+import { SAFETY_RE, classifyLocal } from './ai.js';
+import { fleetStatus } from './ops.js';
 import { MIN } from '../lib/time.js';
 
 const PRI = { high: 0, medium: 1, low: 2 };
@@ -30,9 +32,60 @@ function busProblem(bus) {
   };
 }
 
-export function askSmartOps(q) {
+// A question asks about data ("any fights on 4602?"); a statement reports
+// something happening ("passengers fighting on 4602"). Speech has no "?".
+const QUESTION_RE = /\?|^\W*(what|what's|whats|where|which|who|when|how|is|are|was|were|any|anything|did|does|do|has|have|show|list|tell|find|give)\b/;
+
+const DAY = 1440 * MIN;
+
+// Someone told SMART Ops about a live safety incident. Never answer that with
+// a bus's maintenance record: surface the incident and a one-tap report.
+function incident(q, bus, mode) {
+  const s = getState();
+  const now = Date.now();
+  const tl = q.toLowerCase();
+  const asking = QUESTION_RE.test(tl);
+  const safetyOpen = s.tickets.filter((t) => t.ai.category === 'safety' && isOpen(t)).sort((a, b) => b.createdAt - a.createdAt);
+  const onBus = bus ? safetyOpen.filter((t) => t.vehicle === bus) : safetyOpen;
+
+  if (asking) {
+    if (!onBus.length) return { text: bus ? `No open safety incidents on Bus ${bus}.` : 'No open safety incidents.', actions: bus ? [{ label: 'Bus record', to: `/fleet/${bus}` }] : [] };
+    return {
+      text: `${onBus.length} open safety incident${onBus.length > 1 ? 's' : ''}${bus ? ` on Bus ${bus}` : ''}:`,
+      list: onBus.slice(0, 4).map((t) => `${t.priority.toUpperCase()} · Bus ${t.vehicle} · ${t.ai.title} · ${t.status}${t.assignee ? ` (${t.assignee})` : ''}`),
+      actions: [{ label: 'OPEN TICKET', to: `/ticket/${onBus[0].id}`, primary: true }],
+    };
+  }
+
+  if (!bus) {
+    return { text: 'That sounds like a safety incident. Which bus? Say or type the bus number with the report (e.g. "fight on bus 4602").\nIf anyone is in immediate danger, call 911 now.', actions: [] };
+  }
+
+  const recent = onBus.find((t) => now - t.createdAt < DAY);
+  if (recent) {
+    return {
+      text: `Already reported: ${recent.ai.title} on Bus ${bus} — ${recent.status.toLowerCase()}${recent.assignee ? `, ${recent.assignee} assigned` : ', supervisor/safety notified'}.\nIf anyone is in immediate danger, call 911 now.`,
+      actions: [{ label: 'OPEN TICKET', to: `/ticket/${recent.id}`, primary: true }],
+    };
+  }
+
+  const fs = fleetStatus(now).find((x) => x.bus === bus);
+  if (!fs) return { text: `Bus ${bus} isn't in the demo fleet. Check the bus number and report again.\nIf anyone is in immediate danger, call 911 now.`, actions: [] };
+  const ai = classifyLocal({ text: q, reportType: 'safety' });
+  return {
+    text: `Safety incident on Bus ${bus} (Route ${fs.route}): ${ai.title}.\nIf anyone is in immediate danger, call 911 now.\nTap Report to log it and notify Supervisor / Safety.`,
+    alert: true,
+    actions: [
+      { label: 'REPORT INCIDENT', primary: true, create: { text: q, reportType: 'safety', inputMode: mode === 'voice' ? 'voice' : 'typed', vehicle: bus, route: fs.route, operatorId: null, operatorName: 'Central Dispatch (Ask SMART Ops)', position: { lat: fs.lat, lng: fs.lng }, ai } },
+      { label: 'Bus record', to: `/fleet/${bus}` },
+    ],
+  };
+}
+
+export function askSmartOps(q, mode = 'typed') {
   const t = q.toLowerCase();
   const bus = t.match(/\b(\d{4})\b/)?.[1];
+  if (SAFETY_RE.test(t)) return incident(q, bus, mode);
   if (bus && /wrong|issue|problem|broken|defect|going on|what'?s up|repair|fix/.test(t)) return busProblem(bus);
   const o = searchOps(q);
   if (o) {

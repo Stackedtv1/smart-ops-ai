@@ -32,7 +32,7 @@ const FACILITY_RULES = [
   { re: /\b(bench|shelter damage|damaged shelter|roof)\b/, sub: 'stop_damage', label: 'Stop Damage', priority: 'low' },
 ];
 
-const SAFETY_RE = /\b(aggressive|agitated|fight|fighting|assault|weapon|gun|knife|threat|threatening|altercation|harass|harassing|injur|injured|fell|fall|medical|unconscious|police|suspicious|intoxicated|drunk|unsafe|fire|smoke|emergency)\b/;
+export const SAFETY_RE = /\b(aggressive|agitated|fight|fights|fighting|fought|brawl|attack|attacked|attacking|punch|punched|punching|assault|assaulted|weapon|gun|knife|stab|stabbed|shooting|shot|threat|threats|threatening|altercation|harass|harassing|injur|injured|bleeding|seizure|overdose|fell|fall|medical|unconscious|police|suspicious|intoxicated|drunk|unsafe|fire|smoke|emergency)\b/;
 const OPS_RE = /\b(detour|construction|blocked|road closed|lane closed|running late|behind schedule|bunching|missed trip|traffic)\b/;
 const FARE_RE = /\b(farebox|fare box|card reader|fare equipment)\b/;
 const VEHICLE_HINT_RE = /\b(bus|coach|engine|vehicle)\b/;
@@ -124,8 +124,8 @@ function classifyCore({ text, reportType }) {
   const confidence = Math.min(0.97, 0.78 + top * 0.05);
 
   if (category === 'safety') {
-    const aggressive = /aggressive|agitated|fight|assault|weapon|gun|knife|threat|altercation/.test(t);
-    const medical = /medical|unconscious|injur|fell|fall/.test(t);
+    const aggressive = /aggressive|agitated|fight|fought|brawl|attack|punch|assault|weapon|gun|knife|stab|shoot|shot|threat|altercation/.test(t);
+    const medical = /medical|unconscious|injur|bleeding|seizure|overdose|fell|fall/.test(t);
     const fire = /fire|smoke/.test(t);
     const sub = fire ? 'fire_smoke' : medical ? 'medical' : aggressive ? 'passenger_conduct' : /slip|wet/.test(t) ? 'slip_hazard' : 'security_concern';
     const title = { fire_smoke: 'Fire / smoke', medical: 'Medical / injury', passenger_conduct: 'Passenger incident', slip_hazard: 'Slip hazard', security_concern: 'Security concern' }[sub];
