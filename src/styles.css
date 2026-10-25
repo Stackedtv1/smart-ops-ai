@@ -866,3 +866,17 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .menu-backdrop { position: fixed; inset: 0; z-index: 44; background: transparent; }
 .dash-top.menus-open { z-index: 47; }
 .more-menu { z-index: 48; }
+
+/* Operator voice assistant */
+.voice { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.voice-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; border: 0; border-radius: 12px; background: #5b3fd6; color: #fff; font-weight: 800; font-size: 16px; letter-spacing: .03em; }
+.voice-big .voice-btn { min-height: 76px; font-size: 20px; }
+.voice.on .voice-btn { background: #d92d20; animation: voicepulse 1.2s ease-in-out infinite; }
+.voice-btn:disabled { opacity: .7; }
+@keyframes voicepulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,45,32,.5); } 50% { box-shadow: 0 0 0 10px rgba(217,45,32,0); } }
+.voice-hint { font-size: 13px; color: var(--muted); text-align: center; }
+.voice-heard { font-size: 16px; font-weight: 700; text-align: center; }
+.voice-result { font-size: 14px; font-weight: 700; padding: 10px 12px; border-radius: 10px; background: #e8f6ee; color: #11683a; }
+.voice-result.danger { background: #fde8e7; color: #b42318; }
+.voice-err { font-size: 13px; color: #b42318; text-align: center; }
+.voice .linkbtn { align-self: center; }

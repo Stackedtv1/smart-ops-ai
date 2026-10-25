@@ -10,6 +10,7 @@ import OpsMap from '../components/OpsMap.jsx';
 import { DetourSummary, TurnIcon } from '../components/OpsWidgets.jsx';
 import { Icon } from '../components/ui.jsx';
 import OperatorShell from './OperatorShell.jsx';
+import VoiceAssist from '../components/VoiceAssist.jsx';
 
 // ---------------------------------------------------------------------------
 // Voice alerts (Web Speech). Audio stays on while moving: eyes on the road.
@@ -102,6 +103,7 @@ export default function OperatorNavigate({ to }) {
           <span className="s">{tbt.sub}</span>
         </span>
       </div>
+      <VoiceAssist scope="navigate" />
 
       <div>
         {detour && <DetourSummary d={detour} />}

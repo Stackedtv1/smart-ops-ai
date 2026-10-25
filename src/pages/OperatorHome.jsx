@@ -7,6 +7,7 @@ import { isMoving, activeDetourFor, unackedFor, openLostForBus, createFieldRepor
 import { Icon } from '../components/ui.jsx';
 import { MessageCard, LostAlertCard } from '../components/OpsWidgets.jsx';
 import OperatorShell from './OperatorShell.jsx';
+import VoiceAssist from '../components/VoiceAssist.jsx';
 import { speak, oneTapDispatch } from './OperatorNavigate.jsx';
 
 function Assist({ icon, label, sub, tone, badge, onClick, live }) {
@@ -116,6 +117,7 @@ export default function OperatorHome() {
 
       {moving ? (
         <>
+          <VoiceAssist big />
           <div className="moving-dock">
             <button className="nav" onClick={() => go('/operator/navigate')}><Icon name="nav" size={30} />{detour ? 'DETOUR NAVIGATION' : 'NAVIGATION'}</button>
             <button className="disp" onClick={() => { oneTapDispatch('call'); setNote('Dispatch will contact you at your next stop.'); }}><Icon name="radio" size={28} />CALL ME</button>
@@ -125,7 +127,7 @@ export default function OperatorHome() {
           {note && <div className="notice notice-ok" role="status">{note}</div>}
           <div className="locked" style={{ padding: 14 }}>
             <div className="t" style={{ fontSize: 20 }}>Bus moving · typing and reports locked</div>
-            <div className="small">Navigation, one-tap Dispatch, Emergency and voice alerts stay on. Everything unlocks when you stop.</div>
+            <div className="small">Talk to SMART Ops, Navigation, one-tap Dispatch and Emergency stay on. Everything else unlocks when you stop.</div>
           </div>
         </>
       ) : (
@@ -134,6 +136,7 @@ export default function OperatorHome() {
           {msgs.slice(0, 2).map((m) => <MessageCard key={m.id} m={m} recipient={OPERATOR.bus} by={`Bus ${OPERATOR.bus} · ${OPERATOR.name}`} />)}
           {lost.slice(0, 1).map((l) => <LostAlertCard key={l.id} item={l} />)}
 
+          <VoiceAssist big />
           <div className="assist-grid">
             <Assist icon="restroom" label="RESTROOM" sub="Best 3 options ahead" tone="relief" onClick={() => go('/operator/relief')} />
             <Assist icon="nav" label={detour ? 'DETOUR' : 'NAVIGATION'} sub={detour ? 'Active · follow route' : 'Route & next stops'} tone="detour" live={!!detour} onClick={() => go('/operator/navigate')} />

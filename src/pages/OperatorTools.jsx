@@ -13,6 +13,7 @@ import { Icon, readPhoto } from '../components/ui.jsx';
 import OpsMap from '../components/OpsMap.jsx';
 import { DetourBanner, MessageCard, ReliefRow } from '../components/OpsWidgets.jsx';
 import OperatorShell, { StoppedOnly } from './OperatorShell.jsx';
+import VoiceAssist from '../components/VoiceAssist.jsx';
 
 const BY = `Bus ${OPERATOR.bus} · ${OPERATOR.name}`;
 
@@ -36,6 +37,7 @@ export function OperatorRelief() {
 
   return (
     <OperatorShell title="Restroom" back="/operator">
+      <VoiceAssist scope="restroom" />
       <StoppedOnly what="Restroom options">
         <div className="row between" style={{ alignItems: 'baseline' }}>
           <h2 className="display" style={{ fontSize: 26 }}>Best options ahead</h2>
@@ -227,6 +229,7 @@ export function OperatorDispatch() {
   };
   return (
     <OperatorShell title="Dispatch" back="/operator">
+      <VoiceAssist scope="dispatch" />
       <StoppedOnly what="Dispatch messaging">
         {ok && <div className="notice notice-ok" role="status">{ok}</div>}
         <section className="panel panel-b stack-sm">
