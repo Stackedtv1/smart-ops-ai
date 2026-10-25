@@ -50,8 +50,8 @@ export function Screen({ compact }) {
   if (path === '/lost-found') return <LostFound />;
   if (path === '/dashboard') return <Dashboard compact={compact} />;
   if ((m = match('/ticket/:id', path))) return <TicketDetail key={path} id={m.id} />;
-  if (path === '/maintenance') return <Maintenance />;
-  if (path === '/facilities') return <Facilities />;
+  if (path.split('?')[0] === '/maintenance') return <Maintenance view={qs(path).get('view') || ''} />;
+  if (path.split('?')[0] === '/facilities') return <Facilities view={qs(path).get('view') || ''} />;
   if (path === '/safety') return <Safety />;
   if (path === '/analytics') return <Analytics />;
   if (path === '/fleet') return <FleetHealth />;

@@ -16,7 +16,7 @@ export function MotionToggle() {
   );
 }
 
-export default function OperatorShell({ title, back, children }) {
+export default function OperatorShell({ title, back, footer, children }) {
   const { go, back: goBack, embedded } = useNav();
   return (
     <div className="op">
@@ -39,7 +39,8 @@ export default function OperatorShell({ title, back, children }) {
           <MotionToggle />
         </div>
       </header>
-      <div className="op-body">{children}</div>
+      <div className={`op-body${footer ? ' has-tabbar' : ''}`}>{children}</div>
+      {footer}
     </div>
   );
 }

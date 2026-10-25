@@ -20,6 +20,52 @@ function Assist({ icon, label, sub, tone, badge, onClick, live }) {
   );
 }
 
+// Bottom bar from the operator mockup: Home · Messages · Emergency · More.
+// Emergency asks once so a stray tap never pages Dispatch.
+function OperatorTabBar({ msgCount, onNote }) {
+  const { go, embedded } = useNav();
+  const [sheet, setSheet] = useState(null);
+  const more = [
+    ['clipboard', 'Pre-Trip', '/operator/pretrip'],
+    ['list', 'My Reports', '/operator/reports'],
+    ['restroom', 'Restroom', '/operator/relief'],
+    ['bag', 'Lost item alerts', '/operator/lost'],
+  ];
+  return (
+    <>
+      <nav className="op-tabbar" aria-label="Operator">
+        <button className="on" aria-current="page" onClick={() => window.scrollTo(0, 0)}><Icon name="home" size={24} />Home</button>
+        <button onClick={() => go('/operator/dispatch')}><Icon name="mail" size={24} />Messages{msgCount > 0 && <span className="nav-badge">{msgCount}</span>}</button>
+        <button className="emer" onClick={() => setSheet('emer')}><Icon name="phonecall" size={24} />Emergency</button>
+        <button onClick={() => setSheet('more')}><Icon name="dots" size={24} />More</button>
+      </nav>
+      {sheet && (
+        <div className="op-sheet-bg" onClick={() => setSheet(null)}>
+          <div className="op-sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            {sheet === 'emer' ? (
+              <>
+                <h3>Send emergency to Dispatch?</h3>
+                <div className="small muted">Sends your bus, route and GPS location. Use the radio emergency button too if you can.</div>
+                <button className="bigemer" onClick={() => { oneTapDispatch('emergency'); setSheet(null); onNote('Emergency sent to Dispatch with your GPS location.'); }}>SEND EMERGENCY</button>
+                <button className="btn btn-lg" onClick={() => setSheet(null)}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <h3>More</h3>
+                {more.map(([icon, label, to]) => (
+                  <button key={to} className="shortcut" onClick={() => { setSheet(null); go(to); }}><span className="row"><Icon name={icon} /> {label}</span><Icon name="chevron" size={18} /></button>
+                ))}
+                {!embedded && <button className="shortcut" onClick={() => go('/')}><span className="row"><Icon name="user" /> Switch role</span></button>}
+                <button className="btn btn-lg" onClick={() => setSheet(null)}>Close</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // Full-screen takeover the moment Dispatch publishes a detour for this route.
 function DetourTakeover({ detour }) {
   const { go } = useNav();
@@ -62,7 +108,7 @@ export default function OperatorHome() {
   const showTakeover = detour && !detour.acks?.[OPERATOR.bus];
 
   return (
-    <OperatorShell>
+    <OperatorShell footer={<OperatorTabBar msgCount={msgs.length} onNote={setNote} />}>
       <div className="row between small" style={{ fontWeight: 600 }}>
         <span>{OPERATOR.name} · <span className="mono">{OPERATOR.id}</span></span>
         <span className="muted">{OPERATOR.garage}</span>
@@ -84,6 +130,7 @@ export default function OperatorHome() {
         </>
       ) : (
         <>
+          {note && <div className="notice notice-ok" role="status">{note}</div>}
           {msgs.slice(0, 2).map((m) => <MessageCard key={m.id} m={m} recipient={OPERATOR.bus} by={`Bus ${OPERATOR.bus} · ${OPERATOR.name}`} />)}
           {lost.slice(0, 1).map((l) => <LostAlertCard key={l.id} item={l} />)}
 

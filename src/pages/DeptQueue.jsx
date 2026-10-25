@@ -26,8 +26,8 @@ const CONFIG = {
   },
 };
 
-export default function DeptQueue({ dept }) {
-  const { go } = useNav();
+export default function DeptQueue({ dept, view = '' }) {
+  const { go, path } = useNav();
   const c = CONFIG[dept];
   const tickets = useStore((s) => s.tickets);
   const now = useNow();
@@ -38,11 +38,15 @@ export default function DeptQueue({ dept }) {
   const [resolving, setResolving] = useState(false);
   const [noteText, setNoteText] = useState('');
   const crews = DEPARTMENTS[c.deps[0]]?.crews || [];
-  const sel = mine.find((t) => t.id === selId) || open[0] || null;
+  const high = open.filter((t) => t.priority === 'high');
+  const mineList = open.filter((t) => t.assignee === c.tech);
+  const VIEW = { high: ['High Priority', high, 'var(--high)'], mine: ['Assigned to Me', mineList, 'var(--accent)'], open: ['Open Jobs', open, 'var(--line-strong)'], done: ['Completed Today', doneToday, 'var(--ok)'] }[view];
+  const shown = VIEW ? VIEW[1] : open;
+  const sel = mine.find((t) => t.id === selId) || shown[0] || null;
   const count = (p) => open.filter((t) => t.priority === p).length;
 
   return (
-    <DashShell active={`/${dept}`}>
+    <DashShell active={path.startsWith(`/${dept}`) ? path : `/${dept}`}>
       <div className="row between wrap">
         <div>
           <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.04em' }}>{c.title}</h1>
@@ -74,13 +78,10 @@ export default function DeptQueue({ dept }) {
                 </span>
               </button>
             );
-            const high = open.filter((t) => t.priority === 'high');
-            const mineList = open.filter((t) => t.priority !== 'high' && t.assignee === c.tech);
-            const rest = open.filter((t) => t.priority !== 'high' && t.assignee !== c.tech);
-            const groups = [
+            const groups = VIEW ? [VIEW] : [
               ['High Priority', high, 'var(--high)'],
-              ['Assigned to Me', mineList, 'var(--accent)'],
-              ['Open Jobs', rest, 'var(--line-strong)'],
+              ['Assigned to Me', mineList.filter((t) => t.priority !== 'high'), 'var(--accent)'],
+              ['Open Jobs', open.filter((t) => t.priority !== 'high' && t.assignee !== c.tech), 'var(--line-strong)'],
               ['Completed Today', doneToday, 'var(--ok)'],
             ];
             return groups.map(([label, list, color]) => (
@@ -170,7 +171,7 @@ export default function DeptQueue({ dept }) {
         </section>
       </div>
 
-      <section className="panel">
+      {view !== 'done' && <section className="panel">
         <div className="panel-h"><h2>Resolved today</h2><span className="tag">{doneToday.length}</span></div>
         <div className="table-wrap">
           <table className="table" style={{ minWidth: 620 }}>
@@ -190,7 +191,7 @@ export default function DeptQueue({ dept }) {
             </tbody>
           </table>
         </div>
-      </section>
+      </section>}
 
       {resolving && sel && <ResolveModal t={sel} by={sel.assignee || c.tech} onClose={() => setResolving(false)} />}
     </DashShell>

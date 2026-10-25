@@ -6,15 +6,32 @@ import { useSyncExternalStore } from 'react';
 
 const is = (...paths) => (p) => paths.some((x) => (x.endsWith('*') ? p.startsWith(x.slice(0, -1)) : p.split('?')[0] === x));
 
+// Maintenance and Facilities: one queue, five ways to look at it.
+export const WORK_VIEWS = [
+  { view: '', label: 'My Work Queue', icon: 'wrench' },
+  { view: 'high', label: 'High Priority', icon: 'alert' },
+  { view: 'mine', label: 'Assigned to Me', icon: 'user' },
+  { view: 'open', label: 'Open Jobs', icon: 'list' },
+  { view: 'done', label: 'Completed Today', icon: 'check' },
+];
+const viewOf = (p) => (p.split('?')[1] || '').match(/(?:^|&)view=([a-z]+)/)?.[1] || '';
+function workTabs(dept, also = []) {
+  return WORK_VIEWS.map((w) => ({
+    label: w.label, icon: w.icon,
+    to: w.view ? `/${dept}?view=${w.view}` : `/${dept}`,
+    on: (p) => (p.split('?')[0] === `/${dept}` ? viewOf(p) === w.view : !w.view && is(...also)(p)),
+  }));
+}
+
 export const NAV = {
   dispatch: {
     label: 'Central Dispatch',
     home: '/dispatch',
     tabs: [
-      { label: 'Home', to: '/dispatch', on: is('/dispatch') },
-      { label: 'Map / Detours', to: '/dispatch/map', on: is('/dispatch/map') },
-      { label: 'Messages', to: '/dispatch/messages', on: is('/dispatch/messages') },
-      { label: 'Incidents', to: '/dashboard', on: is('/dashboard', '/ticket/*') },
+      { label: 'Home', icon: 'home', to: '/dispatch', on: is('/dispatch') },
+      { label: 'Map / Detours', icon: 'map', to: '/dispatch/map', on: is('/dispatch/map') },
+      { label: 'Messages', icon: 'mail', badge: 'dispatchMessages', to: '/dispatch/messages', on: is('/dispatch/messages') },
+      { label: 'Incidents', icon: 'alert', badge: 'newIncidents', to: '/dashboard', on: is('/dashboard', '/ticket/*') },
     ],
     more: [
       { label: 'Terminals', to: '/terminal/oakland', on: is('/terminal*') },
@@ -32,36 +49,36 @@ export const NAV = {
     label: 'Terminal Supervisor',
     home: '/terminal/oakland',
     tabs: [
-      { label: 'Terminal', to: '/terminal/oakland', on: (p) => /^\/terminal(\/[a-z]+)?$/.test(p) },
-      { label: 'Buses', to: '/terminal/oakland/buses', on: (p) => /\/buses$/.test(p) },
-      { label: 'Incidents', to: '/terminal/oakland/incidents', on: (p) => /\/incidents$/.test(p) || p.startsWith('/ticket/') },
-      { label: 'Lost & Found', to: '/terminal/oakland/lost', on: (p) => /\/lost$/.test(p) },
-      { label: 'Messages', to: '/terminal/oakland/messages', on: (p) => /\/messages$/.test(p) },
+      { label: 'Terminal', icon: 'building', to: '/terminal/oakland', on: (p) => /^\/terminal(\/[a-z]+)?$/.test(p) },
+      { label: 'Buses', icon: 'bus', to: '/terminal/oakland/buses', on: (p) => /\/buses$/.test(p) },
+      { label: 'Incidents', icon: 'alert', to: '/terminal/oakland/incidents', on: (p) => /\/incidents$/.test(p) || p.startsWith('/ticket/') },
+      { label: 'Lost & Found', icon: 'bag', to: '/terminal/oakland/lost', on: (p) => /\/lost$/.test(p) },
+      { label: 'Messages', icon: 'mail', to: '/terminal/oakland/messages', on: (p) => /\/messages$/.test(p) },
     ],
   },
   customer: {
     label: 'Customer Service',
     home: '/lost-found',
-    tabs: [{ label: 'Lost & Found', to: '/lost-found', on: is('/lost-found') }],
+    tabs: [{ label: 'Lost & Found', icon: 'bag', to: '/lost-found', on: is('/lost-found') }],
   },
   maintenance: {
     label: 'Maintenance',
     home: '/maintenance',
-    tabs: [{ label: 'My Work Queue', to: '/maintenance', on: is('/maintenance', '/ticket/*', '/fleet*') }],
+    tabs: workTabs('maintenance', ['/ticket/*', '/fleet*']),
   },
   facilities: {
     label: 'Facilities',
     home: '/facilities',
-    tabs: [{ label: 'My Work Queue', to: '/facilities', on: is('/facilities', '/ticket/*') }],
+    tabs: workTabs('facilities', ['/ticket/*']),
   },
   admin: {
     label: 'Management',
     home: '/dashboard',
     tabs: [
-      { label: 'Overview', to: '/dashboard', on: is('/dashboard', '/ticket/*') },
-      { label: 'Fleet Health', to: '/fleet', on: is('/fleet*') },
-      { label: 'Analytics', to: '/analytics', on: is('/analytics') },
-      { label: 'ROI', to: '/roi', on: is('/roi*') },
+      { label: 'Overview', icon: 'chart', to: '/dashboard', on: is('/dashboard', '/ticket/*') },
+      { label: 'Fleet Health', icon: 'pulse', to: '/fleet', on: is('/fleet*') },
+      { label: 'Analytics', icon: 'chart', to: '/analytics', on: is('/analytics') },
+      { label: 'ROI', icon: 'dollar', to: '/roi', on: is('/roi*') },
     ],
     more: [
       { label: 'Dispatch Home', to: '/dispatch', on: is('/dispatch') },

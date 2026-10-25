@@ -3,8 +3,8 @@ import { useNav } from '../lib/router.jsx';
 import { onEvent, loadDemoScenario, resetDemo } from '../services/store.js';
 import { deptLabel } from '../lib/config.js';
 import { durationLabel } from '../lib/time.js';
-import { DemoFlag, Modal } from './ui.jsx';
-import { useStore } from '../services/store.js';
+import { DemoFlag, Modal, Icon } from './ui.jsx';
+import { useStore, isOpen } from '../services/store.js';
 import { useRole, setRole, navFor, NAV, ROLE_LABEL } from '../lib/role.js';
 import AskFab from './AskFab.jsx';
 import { FIELD_KINDS, terminalName } from '../services/ops.js';
@@ -141,6 +141,11 @@ export default function DashShell({ active, children, compact }) {
   const nav = navFor(role || 'dispatch', cur);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreOn = (nav.more || []).find((t) => t.on(cur));
+  // Tab badges: things that are waiting on a person.
+  const badges = useStore((st) => ({
+    dispatchMessages: (st.ops?.messages || []).filter((m) => m.recipients?.includes('DISPATCH') && !m.acks?.DISPATCH).length,
+    newIncidents: st.tickets.filter((t) => isOpen(t) && t.status === 'New').length,
+  }));
   const liveStatus = useStore((st) => st.liveStatus);
   const liveLabel = { live: 'Live · shared across every screen', connecting: 'Connecting to live data…', offline: 'Offline · this device only', local: 'Demo · this browser' }[liveStatus] || 'Demo';
   return (
@@ -179,12 +184,12 @@ export default function DashShell({ active, children, compact }) {
           <nav className="dash-nav" aria-label="Views" ref={navRef}>
             {nav.tabs.map((t) => (
               <a key={t.to} href={`#${t.to}`} className={t.on(cur) ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(t.to); }}>
-                {t.label}
+                {t.icon && <Icon name={t.icon} size={16} />}{t.label}{t.badge && badges[t.badge] > 0 && <span className="nav-badge">{badges[t.badge]}</span>}
               </a>
             ))}
             {nav.more?.length > 0 && (
               <a href="#more" className={moreOn ? 'on' : ''} onClick={(e) => { e.preventDefault(); setMoreOpen((m) => !m); }} aria-expanded={moreOpen}>
-                {moreOn ? moreOn.label : 'More'} ▾
+                <Icon name="dots" size={16} />{moreOn ? moreOn.label : 'More'} ▾
               </a>
             )}
           </nav>

@@ -284,6 +284,9 @@ p { margin: 0; }
 .dash-nav { display: flex; gap: 2px; overflow-x: auto; padding: 0 20px; background: var(--bar-2); scrollbar-width: none; }
 .dash-nav a { padding: 10px 14px; color: var(--bar-muted); font-weight: 700; font-size: 13.5px; text-decoration: none; border-bottom: 3px solid transparent; white-space: nowrap; }
 .dash-nav a.on { color: var(--bar-ink); border-bottom-color: var(--flag); }
+.dash-nav a { display: inline-flex; align-items: center; gap: 6px; }
+.dash-nav a svg { flex: none; opacity: .85; }
+.nav-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e5484d; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
 .dash-nav a:hover { color: var(--bar-ink); }
 .dash-top .btn { background: transparent; color: var(--bar-ink); border-color: rgba(255,255,255,.25); }
 .dash-top .btn:hover { background: rgba(255,255,255,.08); }
@@ -839,3 +842,15 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .takeover-card.simple .bigack { background: var(--flag); color: #1c1600; }
 .qgroup + .qgroup { border-top: 1px solid var(--line); }
 .qgroup-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-left: 4px solid; background: var(--surface-2); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Operator bottom bar: Home · Messages · Emergency · More */
+.op-tabbar { position: sticky; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.op-tabbar button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; background: none; border: 0; color: var(--muted); font-size: 12px; font-weight: 700; min-height: 52px; }
+.op-tabbar button.on { color: var(--accent); }
+.op-tabbar button.emer { color: #d92d20; }
+.op-tabbar .nav-badge { position: absolute; top: 2px; left: calc(50% + 6px); }
+.op-sheet-bg { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.op-sheet { width: min(520px, 100%); background: var(--surface); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
+.op-sheet h3 { margin: 0 0 4px; font-size: 18px; }
+.op-sheet .bigemer { background: #d92d20; color: #fff; border: 0; border-radius: 12px; padding: 18px; font-size: 20px; font-weight: 800; }
+.op-body.has-tabbar { padding-bottom: 24px; }

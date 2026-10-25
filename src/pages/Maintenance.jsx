@@ -1,5 +1,5 @@
 import DeptQueue from './DeptQueue.jsx';
 
-export default function Maintenance() {
-  return <DeptQueue dept="maintenance" />;
+export default function Maintenance({ view = '' }) {
+  return <DeptQueue dept="maintenance" view={view} />;
 }
