@@ -854,3 +854,11 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .op-sheet h3 { margin: 0 0 4px; font-size: 18px; }
 .op-sheet .bigemer { background: #d92d20; color: #fff; border: 0; border-radius: 12px; padding: 18px; font-size: 20px; font-weight: 800; }
 .op-body.has-tabbar { padding-bottom: 24px; }
+
+/* Header role switcher: tap the role pill to jump to any department's screen */
+.role-btn { cursor: pointer; font-size: 13px; padding: 4px 12px; }
+.role-btn:hover { background: rgba(255,255,255,.18); }
+.role-menu { position: absolute; left: 0; top: calc(100% + 6px); z-index: 45; min-width: 230px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,.25)); padding: 6px; display: flex; flex-direction: column; }
+.role-menu button { display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; background: none; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--ink); text-align: left; }
+.role-menu button:hover { background: var(--bg); }
+.role-menu button.on { background: var(--accent); color: var(--accent-ink, #fff); }

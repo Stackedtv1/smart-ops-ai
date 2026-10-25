@@ -25,6 +25,7 @@ function workTabs(dept, also = []) {
 
 export const NAV = {
   dispatch: {
+    icon: 'radio',
     label: 'Central Dispatch',
     home: '/dispatch',
     tabs: [
@@ -46,6 +47,7 @@ export const NAV = {
     ],
   },
   terminal: {
+    icon: 'building',
     label: 'Terminal Supervisor',
     home: '/terminal/oakland',
     tabs: [
@@ -56,22 +58,35 @@ export const NAV = {
       { label: 'Messages', icon: 'mail', to: '/terminal/oakland/messages', on: (p) => /\/messages$/.test(p) },
     ],
   },
+  safety: {
+    icon: 'shield',
+    label: 'Safety & Security',
+    home: '/safety',
+    tabs: [
+      { label: 'Safety Queue', icon: 'shield', to: '/safety', on: is('/safety', '/ticket/*') },
+      { label: 'Guardian Alerts', icon: 'sparkle', to: '/guardian', on: is('/guardian') },
+    ],
+  },
   customer: {
+    icon: 'bag',
     label: 'Customer Service',
     home: '/lost-found',
     tabs: [{ label: 'Lost & Found', icon: 'bag', to: '/lost-found', on: is('/lost-found') }],
   },
   maintenance: {
+    icon: 'wrench',
     label: 'Maintenance',
     home: '/maintenance',
     tabs: workTabs('maintenance', ['/ticket/*', '/fleet*']),
   },
   facilities: {
+    icon: 'shelter',
     label: 'Facilities',
     home: '/facilities',
     tabs: workTabs('facilities', ['/ticket/*']),
   },
   admin: {
+    icon: 'chart',
     label: 'Management',
     home: '/dashboard',
     tabs: [

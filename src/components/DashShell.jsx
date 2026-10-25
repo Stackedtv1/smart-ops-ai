@@ -140,6 +140,7 @@ export default function DashShell({ active, children, compact }) {
   const role = useRole();
   const nav = navFor(role || 'dispatch', cur);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [rolesOpen, setRolesOpen] = useState(false);
   const moreOn = (nav.more || []).find((t) => t.on(cur));
   // Tab badges: things that are waiting on a person.
   const badges = useStore((st) => ({
@@ -157,7 +158,24 @@ export default function DashShell({ active, children, compact }) {
             <span className="tagline hide-sm">AI-Powered Operational Intelligence</span>
           </div>
           <DemoFlag />
-          {!compact && <span className="role-chip hide-sm">{ROLE_LABEL[role || 'dispatch']}</span>}
+          {!compact && (
+            <div style={{ position: 'relative' }}>
+              <button className="role-chip role-btn" onClick={() => setRolesOpen((o) => !o)} aria-expanded={rolesOpen} aria-haspopup="menu">
+                {ROLE_LABEL[role || 'dispatch']} ▾
+              </button>
+              {rolesOpen && (
+                <div className="role-menu" role="menu" onMouseLeave={() => setRolesOpen(false)}>
+                  <div className="xs muted" style={{ padding: '4px 10px 6px', fontWeight: 800, letterSpacing: '.06em' }}>SWITCH SCREEN</div>
+                  <button role="menuitem" onClick={() => { setRolesOpen(false); setRole(null); go('/operator'); }}><Icon name="bus" size={18} /> Operator</button>
+                  {Object.entries(NAV).map(([k, v]) => (
+                    <button key={k} role="menuitem" className={(role || 'dispatch') === k ? 'on' : ''} onClick={() => { setRolesOpen(false); setRole(k); go(v.home); }}>
+                      <Icon name={v.icon || 'user'} size={18} /> {v.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grow" />
           {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
