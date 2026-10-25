@@ -11,19 +11,21 @@ import DetourPlanner from '../components/DetourPlanner.jsx';
 import { deptLabel } from '../lib/config.js';
 import DashShell from '../components/DashShell.jsx';
 import OpsMap from '../components/OpsMap.jsx';
+import { useLiveBuses, LIVE_REASON } from '../services/liveBuses.js';
 import { useNow } from '../components/TicketTable.jsx';
 import { RouteBadge } from '../components/ui.jsx';
 import { StatCard } from '../components/Widgets.jsx';
 
-const LAYERS = [['buses', 'Buses'], ['field', 'Operator reports'], ['relief', 'Relief points'], ['terminals', 'Terminals']];
+const LAYERS = [['live', 'Live SMART'], ['buses', 'Demo buses'], ['field', 'Operator reports'], ['relief', 'Relief points'], ['terminals', 'Terminals']];
 const ROUTE_IDS = ROUTES.filter((r) => r.path?.length > 1 || r.sharesPathWith).map((r) => r.id);
 
 export default function DispatchHub({ view = 'home' }) {
   const { go } = useNav();
   const ops = useStore((s) => s.ops);
+  const liveFeed = useLiveBuses();
   const now = useNow(10000);
   const fleet = useMemo(() => fleetStatus(now), [now, ops]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [layers, setLayers] = useState({ buses: true, field: true, relief: false, terminals: true });
+  const [layers, setLayers] = useState({ live: true, buses: true, field: true, relief: false, terminals: true });
   const [planner, setPlanner] = useState(null);
   const tickets = useStore((s) => s.tickets);
   const guardian = useStore((s) => s.guardian);
@@ -93,7 +95,7 @@ export default function DispatchHub({ view = 'home' }) {
           <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '.02em' }}>{T[0]}</h1>
           <div className="small muted">{T[1]}</div>
         </div>
-        <span className="demo-data">Simulated positions</span>
+        <span className="demo-data">{liveFeed.live ? "Live SMART buses + simulated demo fleet" : "Simulated positions"}</span>
       </div>
 
       {view === 'home' && (
@@ -149,7 +151,14 @@ export default function DispatchHub({ view = 'home' }) {
                 {focus && <button onClick={() => setFocus(null)}>Show all ✕</button>}
               </div>
             </div>
+            <div className={`livebar ${liveFeed.live ? 'on' : ''}`} role="status">
+              <span className="dot" />
+              {liveFeed.live
+                ? <>LIVE · {liveFeed.vehicles.length} SMART buses reporting{liveFeed.stale ? ' (last update delayed)' : ''} · demo buses shown with fleet numbers</>
+                : liveFeed.status === 'idle' ? 'Checking SMART live feed…' : (LIVE_REASON[liveFeed.reason] || 'Simulated buses')}
+            </div>
             <OpsMap
+              live={layers.live && liveFeed.live ? liveFeed.vehicles : []}
               buses={layers.buses ? fleet : []} field={layers.field ? field : []} relief={layers.relief ? relief : null}
               detours={activeDetours} showTerminals={layers.terminals} fit={fit} height={460} label="Central dispatch operations map"
             />

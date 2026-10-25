@@ -880,3 +880,9 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .voice-result.danger { background: #fde8e7; color: #b42318; }
 .voice-err { font-size: 13px; color: #b42318; text-align: center; }
 .voice .linkbtn { align-self: center; }
+
+/* Live SMART feed status above the dispatch map */
+.livebar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); }
+.livebar .dot { width: 9px; height: 9px; border-radius: 50%; background: #8796ab; flex: none; }
+.livebar.on { color: #0b7a6e; }
+.livebar.on .dot { background: #0e9f8e; animation: live 2s infinite; }

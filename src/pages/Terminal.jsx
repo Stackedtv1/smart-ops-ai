@@ -11,11 +11,13 @@ import { MessageCard, CustodyChain } from '../components/OpsWidgets.jsx';
 import { StatCard } from '../components/Widgets.jsx';
 import { PriorityPill, StatusPill, RouteBadge } from '../components/ui.jsx';
 import OpsMap from '../components/OpsMap.jsx';
+import { useLiveBuses } from '../services/liveBuses.js';
 import { catShort } from '../lib/config.js';
 
 export default function Terminal({ id = 'oakland', view = 'overview' }) {
   const { go } = useNav();
   const term = terminalById(id) || TERMINALS[0];
+  const liveFeed = useLiveBuses();
   const ops = useStore((s) => s.ops);
   const tickets = useStore((s) => s.tickets);
   const now = useNow(10000);
@@ -65,7 +67,7 @@ export default function Terminal({ id = 'oakland', view = 'overview' }) {
           <div className="main-grid">
             <section className="panel">
               <div className="panel-h"><h2>{term.name} routes</h2><span className="small muted">Simulated AVL</span></div>
-              <OpsMap routes={term.routes} buses={fleet} field={road} detours={detours} showTerminals height={320} label={`${term.name} routes map`} />
+              <OpsMap routes={term.routes} buses={fleet} live={liveFeed.live ? liveFeed.vehicles : []} field={road} detours={detours} showTerminals height={320} label={`${term.name} routes map`} />
             </section>
             <div className="stack" style={{ gap: 16 }}>
           <section className="panel">

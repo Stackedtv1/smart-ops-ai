@@ -12,7 +12,7 @@ const BUS_COLOR = { 'On time': 'var(--ok)', Late: 'var(--med)', Held: 'var(--hig
 const toPts = (path) => path.map(([la, lo]) => project(la, lo).join(',')).join(' ');
 
 export default function OpsMap({
-  routes = null, buses = [], relief = null, field = [], detours = [], you = null, fit = null, height = 360,
+  routes = null, buses = [], live = [], relief = null, field = [], detours = [], you = null, fit = null, height = 360,
   showTerminals = false, onPick, label, legend = true, trail = null, heading = null,
 }) {
   const wrap = useRef(null);
@@ -157,6 +157,17 @@ export default function OpsMap({
           );
         })}
 
+        {live.map((v) => {
+          const [x, y] = project(v.lat, v.lng);
+          return (
+            <g key={`live-${v.id}`} transform={`translate(${x},${y})`} style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); choose({ type: 'live', item: v }); }}>
+              {v.bearing != null && <path d={`M0 ${-px(13)} L${px(4)} ${-px(7)} L${-px(4)} ${-px(7)} Z`} fill="#0e9f8e" transform={`rotate(${v.bearing})`} />}
+              <circle r={px(7)} fill="#0e9f8e" stroke="#fff" strokeWidth={px(2)} />
+              {v.route && <text x={px(10)} y={px(4)} fontSize={px(10)} fontWeight="800" fill="#0b7a6e" fontFamily="var(--font-mono)">{v.route}</text>}
+            </g>
+          );
+        })}
+
         {you && (() => {
           const [x, y] = project(you.lat, you.lng);
           return (
@@ -172,6 +183,7 @@ export default function OpsMap({
         <div className="opsmap-pop" role="status">
           <button className="btn btn-ghost btn-sm" style={{ float: 'right', marginTop: -4 }} onClick={() => setPick(null)} aria-label="Close">✕</button>
           {pick.type === 'bus' && (<><b>Bus {pick.item.bus}</b> · Route {pick.item.route} {pick.item.dir}<div className="small muted">{pick.item.status}{pick.item.late != null && pick.item.status !== 'No AVL ping' ? ` · ${pick.item.late > 0 ? `${pick.item.late} min late` : 'on schedule'}` : ''}{pick.item.layover ? ' · at layover' : ''}</div></>)}
+          {pick.type === 'live' && (<><b>LIVE · SMART bus {pick.item.label || pick.item.id}</b>{pick.item.route ? ` · Route ${pick.item.route}` : ''}<div className="small muted">{pick.item.speedMph != null ? `${pick.item.speedMph} mph · ` : ''}{pick.item.ts ? `position ${Math.max(0, Math.round(Date.now() / 1000 - pick.item.ts))} sec ago` : 'real-time position'}</div><div className="xs muted">SMART GTFS-Realtime feed</div></>)}
           {pick.type === 'relief' && (<><b>{pick.item.name}</b><div className="small muted">{pick.item.type} · {pick.item.hours}</div><div className="small">{pick.item.busPullNote}</div></>)}
           {pick.type === 'field' && (<><b>{pick.item.label}</b> · Bus {pick.item.bus}<div className="small">“{pick.item.text}”</div><div className="small muted">Routed to {pick.item.routedTo} · {pick.item.status}</div></>)}
         </div>
@@ -179,6 +191,7 @@ export default function OpsMap({
       {legend && <div className="opsmap-legend xs">
         {buses.length > 0 && <span><i style={{ background: 'var(--ok)' }} />Bus on time</span>}
         {buses.length > 0 && <span><i style={{ background: 'var(--med)' }} />Late</span>}
+        {live.length > 0 && <span><i style={{ background: '#0e9f8e', borderRadius: 99 }} />Live SMART bus</span>}
         {field.length > 0 && <span><i className="tri" />Operator report</span>}
         {reliefPts.length > 0 && <span><i style={{ background: 'var(--ok)', borderRadius: 99 }} />Relief point</span>}
         {detours.length > 0 && <span><i style={{ background: '#8796ab' }} />Normal route</span>}
