@@ -44,7 +44,7 @@ export function useLiveBuses() {
 }
 
 export const LIVE_REASON = {
-  'no-key': 'Simulated buses · live SMART feed not connected yet (add the Swiftly API key)',
+  'no-key': 'Simulated buses · live SMART feed not connected',
   'bad-key': 'Simulated buses · the Swiftly API key was rejected',
   'feed-error': 'Simulated buses · SMART live feed not responding',
   unreachable: 'Simulated buses · live feed unavailable',

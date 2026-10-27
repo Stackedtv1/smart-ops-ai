@@ -4,13 +4,21 @@
 // and returns plain JSON for the app. The API key stays here on the server.
 //
 // Netlify environment variables:
-//   SWIFTLY_API_KEY        required — key from Swiftly (sent as the Authorization header)
-//   SWIFTLY_VEHICLES_URL   optional — override the feed URL
+//   (none required) — by default this reads SMART's own open feed on
+//                         bustime.smartbus.org, which needs no key (the same
+//                         feed TransitWatch uses). Its https host refuses
+//                         connections, so it is fetched over http here,
+//                         server-side; the browser never makes that request.
+//   SWIFTLY_API_KEY        optional — if set, use SMART's Swiftly-hosted feed instead
+//   SWIFTLY_VEHICLES_URL   optional — override the Swiftly feed URL
 //
 // No key, or the feed is down -> { live: false, reason } and the app keeps
 // showing its simulated buses.
 
-const FEED_URL = process.env.SWIFTLY_VEHICLES_URL || 'https://api.goswift.ly/real-time/detroit-smartbus/gtfs-rt-vehicle-positions';
+const SMART_FEED_URL = 'http://bustime.smartbus.org/gtfsrt/vehicles';
+const SWIFTLY_FEED_URL = process.env.SWIFTLY_VEHICLES_URL || 'https://api.goswift.ly/real-time/detroit-smartbus/gtfs-rt-vehicle-positions';
+// SMART's server resets connections from non-browser clients.
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36';
 const STALE_SEC = 5 * 60; // ignore positions older than 5 minutes
 const CACHE_MS = 10_000; // one upstream call per 10 s per function instance
 
@@ -100,14 +108,17 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
 
 export default async () => {
   const key = process.env.SWIFTLY_API_KEY;
-  if (!key) return json({ live: false, reason: 'no-key', vehicles: [] });
+  const url = key ? SWIFTLY_FEED_URL : SMART_FEED_URL;
+  const headers = key
+    ? { Authorization: key, Accept: 'application/x-protobuf' }
+    : { 'User-Agent': UA, Accept: 'application/x-protobuf,*/*' };
   if (cache.body && Date.now() - cache.at < CACHE_MS) return json(cache.body);
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 8000);
-    const res = await fetch(FEED_URL, { headers: { Authorization: key, Accept: 'application/x-protobuf' }, signal: ctl.signal });
+    const res = await fetch(url, { headers, signal: ctl.signal });
     clearTimeout(timer);
-    if (res.status === 401 || res.status === 403) return json({ live: false, reason: 'bad-key', vehicles: [] });
+    if (key && (res.status === 401 || res.status === 403)) return json({ live: false, reason: 'bad-key', vehicles: [] });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { feedTs, vehicles } = decodeVehiclePositions(Buffer.from(await res.arrayBuffer()));
     const nowSec = Math.floor(Date.now() / 1000);
