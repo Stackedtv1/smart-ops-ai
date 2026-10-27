@@ -11,7 +11,12 @@ import {
 const EMERGENCY_RE = /\b(emergency|911|help me|need help now|gun|knife|weapon|shot|shooting|stab|stabbed|fight|fighting|fought|attack|attacked|assault|assaulted|punch|punched|bleeding|unconscious|not breathing|overdose|seizure|fire|smoke|crash|accident|collision)\b/;
 const DISPATCH_RE = /\b(dispatch|dispatcher|tell (them|dispatch|control)|let (dispatch|control|them) know|call me|contact me|radio me|supervisor|road sup|relief (driver|operator)|swap|running (late|behind|early)|\d+ (min|mins|minutes) (late|behind)|late|behind schedule|delay|delayed|message)\b/;
 const RESTROOM_RE = /\b(restroom|rest room|bathroom|toilet|washroom|lavatory|relief point|pee|potty|break|wash my hands)\b/;
-const NAV_RE = /\b(navigat\w*|directions?|detour|next stop|where am i|which way|turn|route|reroute|get me to|take me to|how do i get)\b/;
+// No bare "route" or "turn": operators say "Route 461 …" or "turn signal out"
+// when reporting, and those words must not hijack a report into navigation.
+const NAV_RE = /\b(navigat\w*|directions?|detour|next stop|where am i|which way|turn (left|right|here|now)|reroute|get me to|take me to|how do i get)\b/;
+// Unmistakable defect words. These beat navigation, so "Route 461 shelter
+// glass broken" is a report even though it mentions a route.
+const DEFECT_RE = /\b(broken|broke|busted|smashed|shattered|cracked|damaged|vandali[sz]ed|not working|won'?t (close|open|work|start)|leak\w*|trash|garbage|overflowing|shelter|glass|graffiti|pothole|spill)\b/;
 const REPORT_RE = /\b(report|broken|not working|won'?t (close|open|work|start)|stuck|leak\w*|trash|garbage|overflowing|shelter|glass|graffiti|pothole|blocked|closed|light\w* out|door|brakes?|ramp|lift|wheelchair|mirror|hvac|heat|a\/c|ac|air conditioning|tire|warning light|engine|smell|spill|sign)\b/;
 
 export const SCOPES = {
@@ -31,6 +36,7 @@ export function operatorIntent(text, scope = 'home') {
   // "The library restroom is closed" is a report about a restroom, not a search.
   if (RESTROOM_RE.test(t) && /\b(is |was )?(closed|locked|out of order|dirty|no access|not open)\b/.test(t)) return 'report';
   if (RESTROOM_RE.test(t)) return 'restroom';
+  if (DEFECT_RE.test(t)) return 'report';
   if (NAV_RE.test(t)) return 'navigate';
   if (REPORT_RE.test(t)) return 'report';
   if (DISPATCH_RE.test(t)) return 'dispatch';
