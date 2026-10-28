@@ -30,7 +30,13 @@ export default async (req) => {
     headers: { Authorization: `Bearer ${key}` },
     body: form,
   });
-  if (!res.ok) return Response.json({ error: 'Transcription failed', status: res.status }, { status: 502 });
+  if (!res.ok) {
+    // Log OpenAI's own reason (bad key, no billing/quota, bad audio) so failures aren't a guess.
+    let reason = '';
+    try { const j = await res.json(); reason = j?.error?.message || j?.error?.code || ''; } catch { /* not JSON */ }
+    console.error(`transcribe-report: OpenAI ${res.status} (${mime}, ${bytes.length} bytes): ${reason}`);
+    return Response.json({ error: 'Transcription failed', status: res.status, reason: reason.slice(0, 200) }, { status: 502 });
+  }
   const data = await res.json();
   return Response.json({ text: data.text || '' });
 };
