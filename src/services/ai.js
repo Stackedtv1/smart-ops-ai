@@ -95,9 +95,38 @@ export function recommendedAction(ai) {
   return 'Route to the responsible team for review.';
 }
 
+// Safety floor: runs AFTER every classification (OpenAI or on-device).
+// Brakes, steering, fire/smoke and injury are always high priority, always
+// need a human, and the AI can never downgrade them.
+const CRITICAL_SUBS = new Set(['brakes', 'steering', 'fire_smoke', 'medical']);
+const CRITICAL_RE = /\b(brake|brakes|braking|steering|steer|fire|smoke|smoking|flames?|injur\w*|bleeding|unconscious|won.?t stop|can.?t stop)\b/;
+
+export function applySafetyFloor(ai, text) {
+  const t = String(text || '').toLowerCase();
+  const subs = String(ai.subcategory || '').split('+');
+  const critical = subs.some((s) => CRITICAL_SUBS.has(s)) || CRITICAL_RE.test(t);
+  if (!critical) return ai;
+  const vehicle = /\b(brake|braking|steer)/.test(t) || subs.includes('brakes') || subs.includes('steering');
+  const out = {
+    ...ai,
+    priority: 'high',
+    safety_review_required: true,
+    requires_human_review: true,
+    allow_ai_downgrade: false,
+    notify: ['dispatch', 'maintenance'],
+  };
+  // If the AI filed a brake/steering report somewhere odd, pull it back to maintenance.
+  if (vehicle && out.category !== 'safety' && out.category !== 'vehicle_defect') {
+    out.category = 'vehicle_defect';
+    out.department = 'maintenance';
+  }
+  if (out.priority !== ai.priority || out.category !== ai.category) out.safety_floor_applied = true;
+  return out;
+}
+
 export function classifyLocal(input) {
   const r = classifyCore(input);
-  return { ...r, recommended_action: recommendedAction(r) };
+  return applySafetyFloor({ ...r, recommended_action: recommendedAction(r) }, input.text);
 }
 
 function classifyCore({ text, reportType }) {
@@ -252,7 +281,7 @@ export async function classifyReport(input) {
     const data = await res.json();
     const r = data?.result;
     if (!isValid(r)) throw new Error('invalid AI output');
-    return {
+    return applySafetyFloor({
       ...local,
       ...r,
       recommended_action: r.recommended_action || recommendedAction(r),
@@ -261,7 +290,7 @@ export async function classifyReport(input) {
       issue: r.issue || local.issue,
       condition: r.condition || local.condition,
       engine: data.model ? `openai:${data.model}` : 'openai',
-    };
+    }, input.text);
   } catch {
     return local;
   }
@@ -293,6 +322,9 @@ export function toContractJson(ai) {
     summary: ai.summary,
     recommended_action: ai.recommended_action || recommendedAction(ai),
     safety_review_required: !!ai.safety_review_required,
+    requires_human_review: !!ai.requires_human_review,
+    allow_ai_downgrade: ai.allow_ai_downgrade !== false,
+    notify: ai.notify || [],
     confidence: Number((ai.confidence ?? 0.9).toFixed(2)),
   };
 }
