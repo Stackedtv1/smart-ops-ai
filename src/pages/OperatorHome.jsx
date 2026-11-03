@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { signOut } from '../lib/role.js';
 import { useNav } from '../lib/router.jsx';
 import { OPERATOR } from '../lib/config.js';
 import { useStore, isOpen } from '../services/store.js';
@@ -56,7 +57,7 @@ function OperatorTabBar({ msgCount, onNote }) {
                 {more.map(([icon, label, to]) => (
                   <button key={to} className="shortcut" onClick={() => { setSheet(null); go(to); }}><span className="row"><Icon name={icon} /> {label}</span><Icon name="chevron" size={18} /></button>
                 ))}
-                {!embedded && <button className="shortcut" onClick={() => go('/')}><span className="row"><Icon name="user" /> Switch role</span></button>}
+                {!embedded && <button className="shortcut" onClick={() => { signOut(); go('/'); }}><span className="row"><Icon name="user" /> Sign out</span></button>}
                 <button className="btn btn-lg" onClick={() => setSheet(null)}>Close</button>
               </>
             )}

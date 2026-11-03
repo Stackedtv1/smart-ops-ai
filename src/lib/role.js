@@ -127,3 +127,23 @@ export function setRole(r) {
 export function useRole() {
   return useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => role, () => role);
 }
+
+// Demo sign-in: who is signed in on this tab. Production replaces this with
+// SMART's own sign-in (Microsoft / SSO for staff, badge + PIN for operators).
+const UKEY = 'smart-ops-ai.user';
+let user = (() => {
+  try { return JSON.parse(sessionStorage.getItem(UKEY) || 'null'); } catch { return null; }
+})();
+const usubs = new Set();
+
+export function setUser(u) {
+  user = u || null;
+  try { if (user) sessionStorage.setItem(UKEY, JSON.stringify(user)); else sessionStorage.removeItem(UKEY); } catch { /* ignore */ }
+  usubs.forEach((f) => f());
+}
+
+export function useUser() {
+  return useSyncExternalStore((f) => { usubs.add(f); return () => usubs.delete(f); }, () => user, () => user);
+}
+
+export function signOut() { setUser(null); setRole(null); }

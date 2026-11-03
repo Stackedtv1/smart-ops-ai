@@ -886,3 +886,17 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .livebar .dot { width: 9px; height: 9px; border-radius: 50%; background: #8796ab; flex: none; }
 .livebar.on { color: #0b7a6e; }
 .livebar.on .dot { background: #0e9f8e; animation: live 2s infinite; }
+
+/* Demo sign-in */
+.signin { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; max-width: 460px; width: 100%; }
+.signin-t { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: .03em; }
+.signin-tag { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--bar); background: var(--flag); padding: 3px 8px; border-radius: 999px; }
+.signin-l { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--bar-muted); }
+.signin-in { font-size: 17px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.25); color: var(--bar-ink); font-family: var(--font-mono, ui-monospace, monospace); }
+.signin-in:focus { outline: 2px solid var(--flag); outline-offset: 1px; }
+.signin-who { font-size: 14px; font-weight: 700; color: var(--flag); }
+.signin-err { font-size: 14px; font-weight: 700; color: #ff8a80; }
+.signin-btn { font-size: 17px; font-weight: 800; padding: 14px; border-radius: 12px; border: 0; background: var(--flag); color: var(--bar); cursor: pointer; }
+.signin-btn:disabled { opacity: .55; cursor: default; }
+.signin-note { font-size: 12px; color: var(--bar-muted); line-height: 1.45; }
+.user-chip { color: var(--bar-ink); font-size: 13px; font-weight: 700; }

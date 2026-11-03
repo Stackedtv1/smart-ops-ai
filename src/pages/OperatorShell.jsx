@@ -1,4 +1,5 @@
 import { useNav } from '../lib/router.jsx';
+import { signOut } from '../lib/role.js';
 import { OPERATOR } from '../lib/config.js';
 import { useStore } from '../services/store.js';
 import { isMoving, setMotion } from '../services/ops.js';
@@ -32,7 +33,7 @@ export default function OperatorShell({ title, back, footer, children }) {
             )}
             <span className="sub">Bus {OPERATOR.bus} • Route {OPERATOR.route}</span>
           </div>
-          {!back && !embedded && <button className="op-back" style={{ fontSize: 14, textDecoration: 'underline' }} onClick={() => go('/')}>Switch role</button>}
+          {!back && !embedded && <button className="op-back" style={{ fontSize: 14, textDecoration: 'underline' }} onClick={() => { signOut(); go('/'); }}>Sign out</button>}
         </div>
         <div className="row between" style={{ marginTop: 8, gap: 8 }}>
           <span className="demo-flag">Demo Environment</span>

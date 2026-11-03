@@ -5,7 +5,7 @@ import { deptLabel } from '../lib/config.js';
 import { durationLabel } from '../lib/time.js';
 import { DemoFlag, Modal, Icon } from './ui.jsx';
 import { useStore, isOpen } from '../services/store.js';
-import { useRole, setRole, navFor, NAV, ROLE_LABEL } from '../lib/role.js';
+import { useRole, setRole, navFor, NAV, ROLE_LABEL, useUser, signOut } from '../lib/role.js';
 import AskFab from './AskFab.jsx';
 import { FIELD_KINDS, terminalName } from '../services/ops.js';
 
@@ -138,6 +138,7 @@ export default function DashShell({ active, children, compact }) {
     if (nav && on) nav.scrollLeft = Math.max(0, on.offsetLeft - nav.clientWidth / 2 + on.clientWidth / 2);
   }, [cur]);
   const role = useRole();
+  const user = useUser();
   const nav = navFor(role || 'dispatch', cur);
   const [moreOpen, setMoreOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
@@ -187,6 +188,12 @@ export default function DashShell({ active, children, compact }) {
           <div className="grow" />
           {!compact && <span className="row small hide-sm" style={{ color: 'var(--bar-muted)', gap: 6 }}><span className="live-dot" /> {liveLabel}</span>}
           <Clock />
+          {!compact && user && user.role !== 'presenter' && (
+            <span className="row user-chip" style={{ gap: 6 }}>
+              <Icon name="user" size={15} /><span className="hide-sm">{user.name}</span>
+              <button className="linkbtn xs" style={{ color: 'var(--bar-ink)' }} onClick={() => { signOut(); go('/'); }}>Sign out</button>
+            </span>
+          )}
           <div style={{ position: 'relative' }}>
             <button className="btn btn-sm" onClick={() => { setMoreOpen(false); setRolesOpen(false); setMenu((m) => !m); }} aria-expanded={menu}>Demo ▾</button>
             {menu && (
@@ -194,7 +201,7 @@ export default function DashShell({ active, children, compact }) {
                 <div className="stack-sm" style={{ padding: 8 }}>
                   <button className="btn btn-sm btn-primary" onClick={() => { const r = loadDemoScenario(); setMsg(r.already ? 'Demo scenario is already loaded.' : `Demo scenario loaded: ${r.created.length} tickets created.`); setMenu(false); }}>Load Demo Scenario</button>
                   <button className="btn btn-sm" onClick={() => { setMenu(false); go('/operator'); }}>Open Operator App</button>
-                  <button className="btn btn-sm" onClick={() => { setMenu(false); go('/'); }}>Switch role</button>
+                  <button className="btn btn-sm" onClick={() => { setMenu(false); signOut(); go('/'); }}>Sign out / switch user</button>
                   <span className="xs muted" style={{ padding: '4px 4px 0', fontWeight: 700 }}>View as</span>
                   <div className="row wrap" style={{ gap: 4 }}>
                     {Object.entries(NAV).map(([k, v]) => <button key={k} className={`btn btn-sm ${(role || 'dispatch') === k ? 'btn-primary' : ''}`} onClick={() => { setMenu(false); setRole(k); go(v.home); }}>{v.label}</button>)}
