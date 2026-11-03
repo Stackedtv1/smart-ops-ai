@@ -10,6 +10,7 @@ import { MessageCard, LostAlertCard } from '../components/OpsWidgets.jsx';
 import OperatorShell from './OperatorShell.jsx';
 import VoiceAssist from '../components/VoiceAssist.jsx';
 import { speak, oneTapDispatch } from './OperatorNavigate.jsx';
+import { quickRestroom } from '../services/operatorVoice.js';
 
 function Assist({ icon, label, sub, tone, badge, onClick, live }) {
   return (
@@ -120,7 +121,8 @@ export default function OperatorHome() {
         <>
           <VoiceAssist big />
           <div className="moving-dock">
-            <button className="nav" onClick={() => go('/operator/navigate')}><Icon name="nav" size={30} />{detour ? 'DETOUR NAVIGATION' : 'NAVIGATION'}</button>
+            <button className="nav" onClick={() => go('/operator/navigate')}><Icon name="nav" size={30} />{detour ? 'DETOUR' : 'NAVIGATION'}</button>
+            <button className="relief" onClick={() => { const r = quickRestroom(); speak(r.say); setNote(r.detail); if (r.to) go(r.to); }}><Icon name="restroom" size={30} />RESTROOM</button>
             <button className="disp" onClick={() => { oneTapDispatch('call'); setNote('Dispatch will contact you at your next stop.'); }}><Icon name="radio" size={28} />CALL ME</button>
             <button className="emer" onClick={() => { oneTapDispatch('emergency'); setNote('Emergency sent to Dispatch with your GPS location.'); }}><Icon name="alert" size={28} />EMERGENCY</button>
             <button className="flag" onClick={flagLocation}>ONE-TAP FLAG · GPS pin, details later</button>
@@ -128,7 +130,7 @@ export default function OperatorHome() {
           {note && <div className="notice notice-ok" role="status">{note}</div>}
           <div className="locked" style={{ padding: 14 }}>
             <div className="t" style={{ fontSize: 20 }}>Bus moving · typing and reports locked</div>
-            <div className="small">Talk to SMART Ops, Navigation, one-tap Dispatch and Emergency stay on. Everything else unlocks when you stop.</div>
+            <div className="small">Talk to SMART Ops, Navigation, one-tap Restroom, Dispatch and Emergency stay on. Everything else unlocks when you stop.</div>
           </div>
         </>
       ) : (

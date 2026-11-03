@@ -799,7 +799,8 @@ button.ev { font: inherit; color: var(--ink); width: 100%; }
 .best3 .go { font-weight: 900; color: #fff; background: #0f7a6d; padding: 8px 12px; border-radius: 10px; font-size: 14px; }
 .moving-dock { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .moving-dock button { padding: 18px 10px; border: 0; border-radius: 14px; font-family: var(--font-display); font-size: 21px; font-weight: 700; letter-spacing: .03em; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.moving-dock .nav { background: #0a3f8a; grid-column: 1 / -1; }
+.moving-dock .nav { background: #0a3f8a; }
+.moving-dock .relief { background: #1f7a4d; }
 .moving-dock .disp { background: #0e2744; }
 .moving-dock .emer { background: #b3261e; }
 .moving-dock .flag { background: #5d6a7e; grid-column: 1 / -1; font-size: 17px; padding: 12px; }

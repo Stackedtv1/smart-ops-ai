@@ -118,3 +118,9 @@ export function runOperatorVoice(text, scope = 'home') {
     detail: `Didn't catch a request in "${words}". Try "nearest restroom", "next stop", or "tell dispatch I'm running late".`,
   };
 }
+
+// One tap while moving: pick the best open restroom ahead, say it out loud,
+// and start navigation. No list to read, nothing to choose.
+export function quickRestroom() {
+  return runOperatorVoice('nearest restroom', 'home');
+}

@@ -10,6 +10,7 @@ import OpsMap from '../components/OpsMap.jsx';
 import { DetourSummary, TurnIcon } from '../components/OpsWidgets.jsx';
 import { Icon } from '../components/ui.jsx';
 import OperatorShell from './OperatorShell.jsx';
+import { quickRestroom } from '../services/operatorVoice.js';
 import VoiceAssist from '../components/VoiceAssist.jsx';
 
 // ---------------------------------------------------------------------------
@@ -136,7 +137,7 @@ export default function OperatorNavigate({ to }) {
         <button onClick={() => { oneTapDispatch('call'); setSent('Dispatch will contact you at your next stop.'); }}><Icon name="radio" size={22} />Call me</button>
         <button onClick={() => { oneTapDispatch('emergency'); setSent('Emergency sent to Dispatch with your GPS.'); }} style={{ color: 'var(--high)' }}><Icon name="alert" size={22} />Emergency</button>
         <button onClick={toggleVoice}><Icon name="radio" size={22} />Voice {voice ? 'on' : 'off'}</button>
-        <button disabled={moving} onClick={() => go('/operator/relief')} style={moving ? { opacity: 0.45 } : null}><Icon name="restroom" size={22} />Restroom</button>
+        <button onClick={() => { if (!moving) { go('/operator/relief'); return; } const r = quickRestroom(); speak(r.say); setSent(r.detail); if (r.to) go(r.to); }}><Icon name="restroom" size={22} />Restroom</button>
       </div>
       {sent && <div className="notice notice-ok" role="status">{sent}</div>}
 
