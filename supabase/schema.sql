@@ -34,3 +34,42 @@ create policy "so demo meta" on public.so_meta for all to anon, authenticated us
 
 alter publication supabase_realtime add table public.so_tickets;
 alter publication supabase_realtime add table public.so_meta;
+
+-- ---------------------------------------------------------------------------
+-- Visit tracking (migration "smart_ops_ai_visit_tracking").
+-- so_visits: one row per app open / demo sign-in, written by the track-visit
+--            Netlify function. Anon may INSERT only — nobody can read it directly.
+-- so_owner:  the owner key (no policies, so anon can't read it). The key value
+--            lives only in the database; set it with:
+--            update so_owner set key = '<new key>' where id = 1;
+-- so_visit_report(key): returns the log only when the key matches. Read it in
+--            the app at /#/owner?key=<key>.
+
+create table if not exists public.so_visits (
+  id bigint generated always as identity primary key,
+  at timestamptz not null default now(),
+  event text not null check (event in ('open','login','presenter')),
+  role text, account text, visitor text, device text, browser text,
+  city text, region text, country text, referrer text,
+  is_owner boolean not null default false
+);
+create index if not exists so_visits_at_idx on public.so_visits (at desc);
+alter table public.so_visits enable row level security;
+drop policy if exists "so visits insert" on public.so_visits;
+create policy "so visits insert" on public.so_visits for insert to anon, authenticated
+  with check (event in ('open','login','presenter') and length(coalesce(visitor,'')) <= 64 and length(coalesce(referrer,'')) <= 300);
+
+create table if not exists public.so_owner (id int primary key default 1 check (id = 1), key text not null);
+alter table public.so_owner enable row level security;
+
+create or replace function public.so_visit_report(p_key text, p_include_owner boolean default false)
+returns setof public.so_visits
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.so_owner where key = p_key) then
+    raise exception 'not allowed';
+  end if;
+  return query select * from public.so_visits v where p_include_owner or not v.is_owner order by v.at desc limit 2000;
+end $$;
+revoke all on function public.so_visit_report(text, boolean) from public;
+grant execute on function public.so_visit_report(text, boolean) to anon, authenticated;
