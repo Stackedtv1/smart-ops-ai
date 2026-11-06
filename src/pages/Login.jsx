@@ -5,6 +5,7 @@ import { routeLabel } from '../services/maps.js';
 import { loadDemoScenario, resetDemo } from '../services/store.js';
 import { DemoFlag } from '../components/ui.jsx';
 import { setRole, setUser } from '../lib/role.js';
+import { trackVisit } from '../services/visits.js';
 
 const ROLES = [
   { id: 'operator', t: 'Operator', d: 'Four buttons: Restroom, Navigation, Report Issue, Dispatch.', to: '/operator', pin: true, pass: '2026', who: { name: OPERATOR.name, id: OPERATOR.id, lines: [OPERATOR.garage, `Bus ${OPERATOR.bus}`, `Route ${routeLabel(OPERATOR.route)}`] } },
@@ -44,6 +45,7 @@ export default function Login() {
     if (!a) { setErr('No account with that ID. Tap a demo account below.'); return; }
     if (pw !== a.pass) { setErr(a.pin ? 'Wrong PIN. Try again.' : 'Wrong password. Try again.'); return; }
     setErr(null); setBusy(true);
+    trackVisit('login', { role: a.id, account: a.who.id });
     setTimeout(() => {
       setUser({ name: a.who.name, id: a.who.id, role: a.id, title: a.t });
       setRole(a.id === 'operator' ? null : a.id);
@@ -97,7 +99,7 @@ export default function Login() {
           </div>
         </div>
 
-        <button className="role" style={{ minHeight: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }} onClick={() => { setRole(null); setUser({ name: 'Presenter', id: 'DEMO-P', role: 'presenter', title: 'Presenter Mode' }); go('/present'); }}>
+        <button className="role" style={{ minHeight: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }} onClick={() => { trackVisit('presenter', { role: 'presenter' }); setRole(null); setUser({ name: 'Presenter', id: 'DEMO-P', role: 'presenter', title: 'Presenter Mode' }); go('/present'); }}>
           <span className="stack-sm" style={{ gap: 2 }}>
             <span className="t">Presenter Mode</span>
             <span className="d">Operator phone and command dashboard side by side. Best for a live pitch on one screen.</span>

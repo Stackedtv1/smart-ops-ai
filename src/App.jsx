@@ -24,6 +24,8 @@ import OperatorReport from './pages/OperatorReport.jsx';
 import DispatchHub from './pages/DispatchHub.jsx';
 import Terminal from './pages/Terminal.jsx';
 import LostFound from './pages/LostFound.jsx';
+import Owner from './pages/Owner.jsx';
+import { trackOpen } from './services/visits.js';
 
 const qs = (path) => new URLSearchParams(path.split('?')[1] || '');
 
@@ -98,11 +100,13 @@ function Presenter() {
 function Root() {
   const { path } = useNav();
   if (path === '/present' || path.startsWith('/present?')) return <Presenter />;
+  if (path === '/owner' || path.startsWith('/owner?')) return <Owner keyParam={qs(path).get('key')} />;
   return <Screen />;
 }
 
 export default function App() {
   useEffect(() => startGuardian(), []);
+  useEffect(() => trackOpen(), []);
   return (
     <NavProvider syncHash>
       <Root />
